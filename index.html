@@ -26,6 +26,7 @@
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
             min-height: 100vh; margin: 0; padding: 15px; 
             backdrop-filter: brightness(0.7); 
+            overflow: hidden; /* Tránh tạo thanh cuộn khi hiệu ứng click tràn viền */
         }
         
         .glass-panel { 
@@ -35,6 +36,7 @@
             box-shadow: 0 30px 60px rgba(0,0,0,0.5), inset 0 2px 2px rgba(255,255,255,0.2); 
             border: 1px solid var(--glass-border); 
             position: relative; overflow: hidden; 
+            z-index: 2;
         }
 
         h2 { text-align: center; margin: 0 0 25px 0; font-weight: 800; font-size: 1.6rem; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
@@ -57,6 +59,12 @@
         }
         .leaflet-control-attribution { display: none !important; }
 
+        /* HIỆU ỨNG RADAR CHO MARKER BẢN ĐỒ */
+        .custom-radar-icon { position: relative; }
+        .radar-core { width: 14px; height: 14px; background: var(--accent); border-radius: 50%; position: absolute; top: -7px; left: -7px; box-shadow: 0 0 15px var(--accent); z-index: 2; border: 2px solid #fff; }
+        .radar-pulse { width: 40px; height: 40px; background: rgba(56, 189, 248, 0.5); border-radius: 50%; position: absolute; top: -20px; left: -20px; z-index: 1; animation: radar-anim 1.5s infinite ease-out; }
+        @keyframes radar-anim { 0% { transform: scale(0.3); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
+
         .top-stats { display: flex; gap: 15px; margin-bottom: 25px; }
         .mini-box { flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); padding: 15px; border-radius: 18px; text-align: center; }
         .mini-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 500; letter-spacing: 1px; }
@@ -78,9 +86,25 @@
 
         #status-txt { text-align: center; font-size: 0.85rem; font-weight: 500; color: var(--text-muted); margin-bottom: 20px; letter-spacing: 1px; height: 15px; text-transform: uppercase; transition: 0.3s; }
         
-        button { background: rgba(255, 255, 255, 0.1); color: var(--text-main); border: 1px solid var(--glass-border); padding: 18px; font-size: 1.1rem; font-weight: 700; font-family: 'Poppins', sans-serif; border-radius: 16px; cursor: pointer; width: 100%; text-transform: uppercase; transition: all 0.3s ease; letter-spacing: 2px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); backdrop-filter: blur(10px); }
+        button { background: rgba(255, 255, 255, 0.1); color: var(--text-main); border: 1px solid var(--glass-border); padding: 18px; font-size: 1.1rem; font-weight: 700; font-family: 'Poppins', sans-serif; border-radius: 16px; cursor: pointer; width: 100%; text-transform: uppercase; transition: all 0.3s ease; letter-spacing: 2px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); backdrop-filter: blur(10px); position: relative; z-index: 10; }
         button:hover { background: var(--text-main); color: #000; box-shadow: 0 15px 25px rgba(0,0,0,0.3); transform: translateY(-3px); }
         button:active { transform: translateY(1px); }
+
+        /* HIỆU ỨNG SÓNG ÂM KHI CLICK MÀN HÌNH */
+        .click-ripple {
+            position: fixed;
+            border-radius: 50%;
+            border: 2px solid var(--accent);
+            transform: translate(-50%, -50%);
+            animation: ripple-effect 0.6s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+            pointer-events: none; /* Không cản trở các thao tác khác */
+            z-index: 9999;
+            box-shadow: 0 0 15px var(--accent), inset 0 0 15px var(--accent);
+        }
+        @keyframes ripple-effect {
+            0% { width: 0px; height: 0px; opacity: 1; border-width: 4px; }
+            100% { width: 120px; height: 120px; opacity: 0; border-width: 0px; }
+        }
     </style>
 </head>
 <body>
@@ -133,6 +157,20 @@
 </div>
 
 <script>
+    // BẮT SỰ KIỆN TẠO SÓNG ÂM NEON KHI CHẠM MÀN HÌNH
+    document.addEventListener('click', function(e) {
+        let ripple = document.createElement('div');
+        ripple.className = 'click-ripple';
+        ripple.style.left = e.clientX + 'px';
+        ripple.style.top = e.clientY + 'px';
+        document.body.appendChild(ripple);
+        
+        // Tự động xóa thẻ div sau khi chạy xong hiệu ứng (600ms) để không làm nặng máy
+        setTimeout(() => {
+            ripple.remove();
+        }, 600);
+    });
+
     let isTesting = false;
     let phase = ''; 
     let activeXhrs = [];
@@ -143,37 +181,38 @@
     let uiFrame;
     let map, userMarker;
 
+    // KẾT CẤU ICON RADAR MỚI CHO BẢN ĐỒ
+    let radarIcon = L.divIcon({
+        className: 'custom-radar-icon',
+        html: '<div class="radar-pulse"></div><div class="radar-core"></div>',
+        iconSize: [0, 0] // Đưa tâm điểm về chính xác giữa tọa độ
+    });
+
     window.onload = function() {
-        // 1. Khởi tạo bản đồ
         map = L.map('map', { zoomControl: false, attributionControl: false }).setView([16.0, 108.0], 5);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
 
-        // 2. Lấy tên Nhà mạng bằng IP (Vì GPS không biết bạn xài mạng gì)
         fetch('https://get.geojs.io/v1/ip/geo.json')
             .then(res => res.json())
             .then(data => {
                 document.getElementById('isp-val').innerText = data.organization_name || data.organization || "Không rõ";
                 
-                // 3. Yêu cầu bật quyền GPS trên trình duyệt
                 if (navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(
                         (position) => {
-                            // Thành công: Đã cho phép truy cập vị trí
                             let lat = position.coords.latitude;
                             let lon = position.coords.longitude;
                             updateMap(lat, lon);
                             
-                            // Dịch tọa độ GPS ra tên Thành phố/Đường (Reverse Geocoding)
                             fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
                                 .then(res => res.json())
                                 .then(geoData => {
                                     let city = geoData.address.city || geoData.address.town || geoData.address.state || "Unknown";
                                     let country = geoData.address.country_code ? geoData.address.country_code.toUpperCase() : "";
                                     document.getElementById('loc-val').innerText = `${city}, ${country}`;
-                                }).catch(() => fallbackIPLocation(data)); // Lỗi dịch thì quay về IP
+                                }).catch(() => fallbackIPLocation(data)); 
                         },
                         (error) => {
-                            // Người dùng từ chối cấp quyền -> Dùng lại vị trí IP dự phòng
                             fallbackIPLocation(data);
                         },
                         { enableHighAccuracy: true, timeout: 5000 }
@@ -188,16 +227,13 @@
             });
     };
 
-    // Hàm cập nhật bản đồ
     function updateMap(lat, lon) {
-        map.setView([lat, lon], 14); // Zoom cận cảnh đường phố
+        map.setView([lat, lon], 14); 
         if (userMarker) map.removeLayer(userMarker);
-        userMarker = L.circleMarker([lat, lon], {
-            radius: 8, fillColor: "#38bdf8", color: "#fff", weight: 2, opacity: 1, fillOpacity: 0.9
-        }).addTo(map);
+        // THAY THẾ DẤU CHẤM TRÒN BẰNG ICON RADAR
+        userMarker = L.marker([lat, lon], { icon: radarIcon }).addTo(map);
     }
 
-    // Hàm dự phòng nếu người dùng không cho phép GPS
     function fallbackIPLocation(data) {
         let city = data.city || "Unknown";
         let country = data.country || "";
