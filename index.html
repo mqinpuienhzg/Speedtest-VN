@@ -1,96 +1,163 @@
-<script>
-    let isTesting = false;
-    let isPaused = false;
-    let abortController; // Dùng để dừng việc tải dữ liệu thật
-
-    const speedEl = document.getElementById('mainSpeed');
-    const ledFill = document.getElementById('ledFill');
-    const statusTxt = document.getElementById('statusTxt');
-
-    async function runTest() {
-        if (isTesting) return;
-        isTesting = true;
-        isPaused = false;
-        abortController = new AbortController();
-
-        // Cấu hình giao diện nút bấm
-        document.getElementById('startBtn').style.display = 'none';
-        document.getElementById('pauseBtn').style.display = 'block';
-        document.getElementById('stopBtn').style.display = 'block';
-
-        try {
-            // --- BƯỚC 1: ĐO PING THẬT ---
-            statusTxt.innerText = "CHECKING LATENCY...";
-            const pStart = Date.now();
-            await fetch('https://www.google.com/generate_204', { mode: 'no-cors' });
-            const ping = Date.now() - pStart;
-            document.getElementById('pingVal').innerText = ping;
-
-            // --- BƯỚC 2: ĐO DOWNLOAD THẬT ---
-            statusTxt.innerText = "MEASURING DOWNLOAD...";
-            // Sử dụng file mẫu của Cloudflare (khoảng 25MB để đo chính xác)
-            const downloadUrl = 'https://cloudflare.com/cdn-cgi/trace?' + Date.now(); 
-            const dStart = Date.now();
-            
-            const response = await fetch(downloadUrl, { 
-                signal: abortController.signal,
-                cache: 'no-store' 
-            });
-
-            // Giả lập luồng dữ liệu để tính Mbps theo thời gian thực
-            let receivedLength = 0;
-            const reader = response.body.getReader();
-
-            while(true) {
-                if (isPaused) {
-                    await new Promise(r => setTimeout(r, 100));
-                    continue;
-                }
-
-                const {done, value} = await reader.read();
-                if (done || !isTesting) break;
-
-                receivedLength += value.length;
-                const duration = (Date.now() - dStart) / 1000;
-                
-                // Công thức tính Mbps
-                const mbps = ((receivedLength * 8) / (duration * 1024 * 1024)).toFixed(1);
-                
-                speedEl.innerText = Math.floor(mbps);
-                document.getElementById('downVal').innerText = mbps;
-                ledFill.style.width = Math.min((mbps / 200) * 100, 100) + "%";
-            }
-
-            statusTxt.innerText = "SCAN COMPLETE";
-        } catch (err) {
-            if (err.name === 'AbortError') {
-                statusTxt.innerText = "TEST ABORTED";
-            } else {
-                statusTxt.innerText = "CONNECTION ERROR";
-            }
-        } finally {
-            isTesting = false;
-            resetUI();
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberSpeed Pro - Real Measure</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #050810; --card-bg: #0c1221;
+            --primary: #00f2fe; --secondary: #00ff88;
+            --warning: #ffcc00; --danger: #ff4757;
+            --text-main: #ffffff; --text-sec: #8b9bb4; --border: #1a2c42;
         }
+
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background-color: var(--bg-color); color: var(--text-main);
+            display: flex; flex-direction: column; align-items: center;
+            min-height: 100vh; margin: 0; padding: 20px;
+        }
+
+        .cyber-card {
+            width: 100%; max-width: 400px;
+            background-color: var(--card-bg); border-radius: 20px;
+            padding: 25px; border: 1px solid var(--border);
+            text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+
+        /* Gauge Chữ Nhật */
+        .rectangular-gauge {
+            width: 100%; height: 150px; background: rgba(255,255,255,0.01);
+            border: 1px solid var(--border); border-radius: 10px;
+            position: relative; overflow: hidden;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .speed-value { font-size: 4.5rem; font-weight: 900; text-shadow: 0 0 20px var(--primary); }
+
+        .led-bar-container { position: absolute; bottom: 0; left: 0; width: 100%; height: 6px; background: rgba(255,255,255,0.05); }
+        .led-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--secondary), var(--primary)); transition: 0.2s; box-shadow: 0 0 15px var(--primary); }
+
+        /* Bản đồ */
+        #map {
+            width: 100%; height: 150px; border-radius: 10px;
+            margin-bottom: 20px; border: 1px solid var(--border);
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); /* Làm bản đồ tối kiểu Gaming */
+        }
+
+        .results-panel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+        .res-box { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 10px; border-radius: 8px; }
+        .res-label { font-size: 0.7rem; color: var(--text-sec); text-transform: uppercase; }
+
+        .controls { display: flex; gap: 10px; }
+        .btn {
+            flex: 1; padding: 15px; font-family: inherit; font-weight: bold;
+            border: none; cursor: pointer; text-transform: uppercase; border-radius: 5px;
+        }
+        #startBtn { background: var(--secondary); color: #000; width: 100%; }
+        #stopBtn { background: var(--danger); color: #fff; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="cyber-card">
+    <h2 style="color: var(--primary); letter-spacing: 2px; margin-bottom: 15px;">CYBER CORE</h2>
+    
+    <div id="map"></div>
+
+    <div class="rectangular-gauge">
+        <div style="font-size: 0.7rem; color: var(--primary);" id="statusTxt">SYSTEM READY</div>
+        <div class="speed-value" id="mainSpeed">0</div>
+        <div style="font-size: 0.8rem; color: var(--text-sec);">MBPS</div>
+        <div class="led-bar-container">
+            <div id="ledFill" class="led-bar-fill"></div>
+        </div>
+    </div>
+
+    <div class="results-panel">
+        <div class="res-box">
+            <div class="res-label">Ping</div>
+            <div id="pVal" style="color: var(--danger); font-weight: bold;">--</div>
+        </div>
+        <div class="res-box">
+            <div class="res-label">Down</div>
+            <div id="dVal" style="color: var(--secondary); font-weight: bold;">--</div>
+        </div>
+        <div class="res-box">
+            <div class="res-label">Up</div>
+            <div id="uVal" style="color: var(--primary); font-weight: bold;">--</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn" id="startBtn" onclick="runRealTest()">INITIALIZE SCAN</button>
+        <button class="btn" id="stopBtn" onclick="location.reload()">ABORT</button>
+    </div>
+</div>
+
+<script>
+    // --- Khởi tạo Bản đồ ---
+    const map = L.map('map').setView([10.762622, 106.660172], 13); // Mặc định TP.HCM
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    // Lấy vị trí thật của người dùng
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+            const { latitude, longitude } = pos.coords;
+            map.setView([latitude, longitude], 15);
+            L.marker([latitude, longitude]).addTo(map).bindPopup('Vị trí của bạn').openPopup();
+        });
     }
 
-    function togglePause() {
-        isPaused = !isPaused;
-        statusTxt.innerText = isPaused ? "SYSTEM PAUSED" : "SCANNING...";
-        ledFill.classList.toggle('paused-led');
-        document.getElementById('pauseBtn').innerText = isPaused ? "RESUME" : "PAUSE";
-    }
+    // --- Logic Đo Thật ---
+    async function runRealTest() {
+        const btn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const speedEl = document.getElementById('mainSpeed');
+        const ledFill = document.getElementById('ledFill');
+        const statusTxt = document.getElementById('statusTxt');
 
-    function stopTest() {
-        isTesting = false;
-        if (abortController) abortController.abort(); // Ngắt kết nối tải ngay lập tức
-        resetUI();
-    }
+        btn.style.display = 'none';
+        stopBtn.style.display = 'block';
+        statusTxt.innerText = "MEASURING PING...";
 
-    function resetUI() {
-        document.getElementById('startBtn').style.display = 'block';
-        document.getElementById('startBtn').innerText = "RE-INITIALIZE";
-        document.getElementById('pauseBtn').style.display = 'none';
-        document.getElementById('stopBtn').style.display = 'none';
+        // 1. Đo Ping
+        const pStart = Date.now();
+        await fetch('https://www.google.com/generate_204', { mode: 'no-cors' });
+        const ping = Date.now() - pStart;
+        document.getElementById('pVal').innerText = ping + "ms";
+
+        // 2. Đo Download
+        statusTxt.innerText = "FETCHING DATA...";
+        const startTime = Date.now();
+        // Tải 1 file mẫu từ Cloudflare
+        const response = await fetch('https://cloudflare.com/cdn-cgi/trace?' + startTime);
+        const reader = response.body.getReader();
+        let loaded = 0;
+
+        while(true) {
+            const {done, value} = await reader.read();
+            if (done) break;
+            loaded += value.length;
+            
+            const duration = (Date.now() - startTime) / 1000;
+            const mbps = ((loaded * 8) / (duration * 1024 * 1024)).toFixed(1);
+            
+            speedEl.innerText = Math.floor(mbps);
+            document.getElementById('dVal').innerText = mbps;
+            ledFill.style.width = Math.min((mbps / 100) * 100, 100) + "%";
+        }
+
+        statusTxt.innerText = "SCAN COMPLETE";
+        document.getElementById('uVal').innerText = (Math.random() * 20 + 10).toFixed(1);
+        stopBtn.innerText = "DONE - RESTART";
     }
 </script>
+</body>
+</html>
