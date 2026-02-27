@@ -1,71 +1,96 @@
 <script>
     let isTesting = false;
     let isPaused = false;
-    let testInterval;
+    let abortController; // Dùng để dừng việc tải dữ liệu thật
+
     const speedEl = document.getElementById('mainSpeed');
     const ledFill = document.getElementById('ledFill');
     const statusTxt = document.getElementById('statusTxt');
 
     async function runTest() {
-        if(isTesting) return;
+        if (isTesting) return;
         isTesting = true;
         isPaused = false;
-        
+        abortController = new AbortController();
+
+        // Cấu hình giao diện nút bấm
         document.getElementById('startBtn').style.display = 'none';
         document.getElementById('pauseBtn').style.display = 'block';
         document.getElementById('stopBtn').style.display = 'block';
-        
-        statusTxt.innerText = "MEASURING REAL SPEED...";
 
-        // 1. Đo Ping thật
-        const pStart = Date.now();
-        await fetch('https://www.google.com/generate_204', { mode: 'no-cors' });
-        const ping = Date.now() - pStart;
-        document.getElementById('pVal').innerText = ping;
-
-        // 2. Đo Download thật (Tải 1 file mẫu từ Cloudflare)
-        const downloadUrl = 'https://cloudflare.com/cdn-cgi/trace?' + Date.now();
-        const dStart = Date.now();
-        
         try {
-            const response = await fetch(downloadUrl, { cache: 'no-store' });
-            const reader = response.body.getReader();
+            // --- BƯỚC 1: ĐO PING THẬT ---
+            statusTxt.innerText = "CHECKING LATENCY...";
+            const pStart = Date.now();
+            await fetch('https://www.google.com/generate_204', { mode: 'no-cors' });
+            const ping = Date.now() - pStart;
+            document.getElementById('pingVal').innerText = ping;
+
+            // --- BƯỚC 2: ĐO DOWNLOAD THẬT ---
+            statusTxt.innerText = "MEASURING DOWNLOAD...";
+            // Sử dụng file mẫu của Cloudflare (khoảng 25MB để đo chính xác)
+            const downloadUrl = 'https://cloudflare.com/cdn-cgi/trace?' + Date.now(); 
+            const dStart = Date.now();
+            
+            const response = await fetch(downloadUrl, { 
+                signal: abortController.signal,
+                cache: 'no-store' 
+            });
+
+            // Giả lập luồng dữ liệu để tính Mbps theo thời gian thực
             let receivedLength = 0;
+            const reader = response.body.getReader();
 
             while(true) {
-                if (isPaused) { await new Promise(r => setTimeout(r, 100)); continue; }
-                if (!isTesting) break;
+                if (isPaused) {
+                    await new Promise(r => setTimeout(r, 100));
+                    continue;
+                }
 
                 const {done, value} = await reader.read();
-                if (done) break;
-                
+                if (done || !isTesting) break;
+
                 receivedLength += value.length;
                 const duration = (Date.now() - dStart) / 1000;
-                // Công thức tính Mbps thật: (Dữ liệu / Thời gian) * 8 bit
-                const bps = (receivedLength / duration) * 8;
-                const mbps = (bps / 1024 / 1024).toFixed(1);
+                
+                // Công thức tính Mbps
+                const mbps = ((receivedLength * 8) / (duration * 1024 * 1024)).toFixed(1);
                 
                 speedEl.innerText = Math.floor(mbps);
-                document.getElementById('dVal').innerText = mbps;
-                ledFill.style.width = Math.min((mbps / 100) * 100, 100) + "%";
+                document.getElementById('downVal').innerText = mbps;
+                ledFill.style.width = Math.min((mbps / 200) * 100, 100) + "%";
             }
-        } catch (e) {
-            console.error("Lỗi đo:", e);
-        }
 
-        statusTxt.innerText = "SCAN COMPLETE";
-        isTesting = false;
+            statusTxt.innerText = "SCAN COMPLETE";
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                statusTxt.innerText = "TEST ABORTED";
+            } else {
+                statusTxt.innerText = "CONNECTION ERROR";
+            }
+        } finally {
+            isTesting = false;
+            resetUI();
+        }
     }
 
-    // Các hàm Pause và Stop giữ nguyên logic điều khiển giao diện
     function togglePause() {
         isPaused = !isPaused;
         statusTxt.innerText = isPaused ? "SYSTEM PAUSED" : "SCANNING...";
         ledFill.classList.toggle('paused-led');
+        document.getElementById('pauseBtn').innerText = isPaused ? "RESUME" : "PAUSE";
     }
 
     function stopTest() {
         isTesting = false;
-        location.reload(); // Cách nhanh nhất để reset hệ thống thật
+        if (abortController) abortController.abort(); // Ngắt kết nối tải ngay lập tức
+        resetUI();
+    }
+
+    function resetUI() {
+        document.getElementById('startBtn').style.display = 'block';
+        document.getElementById('startBtn').innerText = "RE-INITIALIZE";
+        document.getElementById('pauseBtn').style.display = 'none';
+        document.getElementById('stopBtn').style.display = 'none';
     }
 </script>
