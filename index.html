@@ -1,114 +1,21 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CyberSpeed Pro V3</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-color: #050810; --card-bg: #0c1221;
-            --primary: #00f2fe; --secondary: #00ff88;
-            --danger: #ff4757; --text-main: #ffffff; --border: #1a2c42;
-        }
-        body {
-            font-family: 'Share Tech Mono', monospace;
-            background-color: var(--bg-color); color: var(--text-main);
-            display: flex; flex-direction: column; align-items: center;
-            justify-content: center; min-height: 100vh; margin: 0; padding: 15px;
-        }
-        .cyber-card {
-            width: 100%; max-width: 380px; background: var(--card-bg);
-            border-radius: 20px; padding: 25px; border: 1px solid var(--border);
-            text-align: center; box-shadow: 0 10px 50px rgba(0,0,0,0.9);
-        }
-        #map {
-            width: 100%; height: 160px; border-radius: 12px;
-            margin-bottom: 20px; border: 1px solid var(--primary);
-            box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
-            background: #000;
-        }
-        .gauge {
-            width: 100%; height: 130px; background: rgba(255,255,255,0.02);
-            border: 1px solid var(--border); border-radius: 10px;
-            position: relative; overflow: hidden;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            margin-bottom: 20px;
-        }
-        .speed-value { font-size: 4rem; font-weight: 900; color: var(--text-main); line-height: 1; }
-        .led-bar {
-            position: absolute; bottom: 0; left: 0; width: 0%; height: 5px;
-            background: linear-gradient(90deg, var(--secondary), var(--primary));
-            box-shadow: 0 0 15px var(--primary); transition: 0.1s;
-        }
-        .results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
-        .res-box { background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 10px; border-radius: 8px; }
-        .res-box div:first-child { font-size: 0.6rem; color: #8b9bb4; text-transform: uppercase; }
-        .res-box div:last-child { font-size: 1.1rem; font-weight: bold; margin-top: 5px; }
-        .btn {
-            width: 100%; padding: 18px; font-family: inherit; font-weight: bold;
-            border: none; border-radius: 8px; cursor: pointer;
-            background: var(--secondary); color: #000; font-size: 1rem;
-            text-transform: uppercase; letter-spacing: 1px;
-        }
-        .btn:disabled { background: #1a2c42; color: #444; cursor: not-allowed; }
-    </style>
-</head>
-<body>
+let isTesting = false;
+async function runInfiniteTest() {
+    isTesting = true;
+    const startTime = Date.now();
+    statusTxt.innerText = "INFINITY SCAN ACTIVE...";
 
-<div class="cyber-card">
-    <h2 style="color: var(--primary); margin-bottom: 15px; font-size: 1.2rem;">SYSTEM SCANNER v3</h2>
-    
-    <div id="map"></div>
-
-    <div class="gauge">
-        <div id="status" style="font-size: 0.7rem; color: var(--primary); margin-bottom: 5px;">READY TO SCAN</div>
-        <div class="speed-value" id="speed">0</div>
-        <div style="font-size: 0.8rem; color: #8b9bb4;">MBPS</div>
-        <div class="led-bar" id="bar"></div>
-    </div>
-
-    <div class="results">
-        <div class="res-box"><div>Ping</div><div id="ping" style="color:var(--danger)">--</div></div>
-        <div class="res-box"><div>Down</div><div id="down" style="color:var(--secondary)">--</div></div>
-        <div class="res-box"><div>Up</div><div id="up" style="color:var(--primary)">--</div></div>
-    </div>
-
-    <button class="btn" id="btn" onclick="startScan()">Initialize 15s Scan</button>
-</div>
-
-<script>
-    // 1. Khởi tạo bản đồ ngay lập tức
-    const map = L.map('map', { attributionControl: false, zoomControl: false }).setView([10.7626, 106.6601], 15);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(p => {
-            const lat = p.coords.latitude;
-            const lng = p.coords.longitude;
-            map.setView([lat, lng], 16);
-            L.circle([lat, lng], { color: '#00f2fe', fillColor: '#00f2fe', fillOpacity: 0.5, radius: 50 }).addTo(map);
-        }, () => { console.log("Lỗi định vị"); });
+    while(isTesting) {
+        // Tải dữ liệu liên tục không dừng
+        await fetch('https://cloudflare.com/cdn-cgi/trace?' + Date.now());
+        
+        // Tính Mbps và cập nhật giao diện liên tục
+        // (Sử dụng lại logic tính MBPS cũ của chúng ta)
+        
+        // Cập nhật biểu đồ hiển thị thời gian đã trôi qua
+        const elapsedMinutes = Math.floor((Date.now() - startTime) / 60000);
+        statusTxt.innerText = `SCANNING FOR ${elapsedMinutes} MINUTES...`;
+        
+        // Nếu muốn dừng sau đúng 60 phút:
+        if (Date.now() - startTime > 3600000) isTesting = false;
     }
-
-    // 2. Logic đo thật trong 15 giây
-    let scanning = false;
-
-    async function startScan() {
-        if (scanning) return;
-        scanning = true;
-
-        const btn = document.getElementById('btn');
-        const speedEl = document.getElementById('speed');
-        const bar = document.getElementById('bar');
-        const status = document.getElementById('status');
-
-        btn.disabled = true;
-        btn.innerText = "SCANNING IN PROGRESS...";
-
-        // Đo Ping
-        status.innerText = "LATENCY CHECK...";
-        const pStart = Date.now();
-        try { await fetch('https://www.google.com/generate_204', { mode: 'no-cors' });
+}
