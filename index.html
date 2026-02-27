@@ -3,129 +3,193 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CyberSpeed - Infinity Scan</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <title>Speedtest - Real World</title>
     <style>
-        :root {
-            --bg-color: #050810; --card-bg: #0c1221;
-            --primary: #00f2fe; --secondary: #00ff88;
-            --danger: #ff4757; --text-main: #ffffff; --border: #1a2c42;
-        }
-        body {
-            font-family: 'Share Tech Mono', monospace;
-            background-color: var(--bg-color); color: var(--text-main);
-            display: flex; flex-direction: column; align-items: center;
-            justify-content: center; min-height: 100vh; margin: 0; padding: 15px;
-        }
-        .cyber-card {
-            width: 100%; max-width: 380px; background: var(--card-bg);
-            border-radius: 20px; padding: 25px; border: 1px solid var(--border);
-            text-align: center; box-shadow: 0 10px 50px rgba(0,0,0,0.9);
-        }
-        #map { width: 100%; height: 150px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--primary); }
-        .gauge {
-            width: 100%; height: 140px; background: rgba(255,255,255,0.02);
-            border: 1px solid var(--border); border-radius: 10px;
-            position: relative; overflow: hidden;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            margin-bottom: 20px;
-        }
-        .speed-value { font-size: 4.5rem; font-weight: 900; color: var(--text-main); line-height: 1; }
-        .led-bar {
-            position: absolute; bottom: 0; left: 0; width: 0%; height: 5px;
-            background: linear-gradient(90deg, var(--secondary), var(--primary));
-            box-shadow: 0 0 15px var(--primary); transition: 0.1s;
-        }
-        .results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
-        .res-box { background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 10px; border-radius: 8px; }
-        .res-box div:first-child { font-size: 0.6rem; color: #8b9bb4; text-transform: uppercase; }
-        .btn {
-            width: 100%; padding: 18px; font-family: inherit; font-weight: bold;
-            border: none; border-radius: 8px; cursor: pointer;
-            background: var(--secondary); color: #000; font-size: 1rem;
-            text-transform: uppercase; letter-spacing: 1px;
-        }
-        #stopBtn { background: var(--danger); color: #fff; display: none; }
+        body { background-color: #0f172a; color: #ffffff; font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .container { background: #1e293b; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.8); width: 320px; border: 1px solid #334155; }
+        h2 { margin-top: 0; color: #38bdf8; font-size: 1.4rem; letter-spacing: 1px; }
+        
+        /* Box Tốc Độ */
+        .speed-box { margin: 20px 0; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 10px; border: 1px solid #334155; }
+        #speed-mbps { font-size: 4.5rem; font-weight: bold; line-height: 1; color: #22c55e; text-shadow: 0 0 15px rgba(34, 197, 94, 0.4); }
+        .unit-main { font-size: 1.2rem; color: #94a3b8; font-weight: bold; margin-bottom: 10px; display: block; }
+        
+        #speed-mbs { font-size: 1.5rem; color: #00f2fe; font-weight: bold; }
+        .unit-sub { font-size: 0.9rem; color: #94a3b8; }
+        
+        #status { font-size: 0.75rem; color: #cbd5e1; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; background: rgba(56, 189, 248, 0.1); padding: 5px; border-radius: 5px; }
+        
+        /* Lưới Ping & Jitter */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+        .stat-box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; border: 1px solid #334155; }
+        .stat-label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 5px; font-weight: bold; }
+        .stat-val { font-size: 1.6rem; font-weight: bold; }
+        #ping-val { color: #f43f5e; } 
+        #jitter-val { color: #f59e0b; } 
+        .ms { font-size: 0.8rem; color: #94a3b8; }
+
+        /* Nút Bấm */
+        button { border: none; padding: 18px; font-size: 1rem; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; text-transform: uppercase; transition: 0.2s; letter-spacing: 1px; }
+        .btn-start { background: #38bdf8; color: #0f172a; }
+        .btn-stop { background: #ff4757; color: #ffffff; }
+        button:active { transform: scale(0.97); }
     </style>
 </head>
 <body>
 
-<div class="cyber-card">
-    <h2 style="color: var(--primary); margin-bottom: 15px; font-size: 1.1rem;">INFINITY CORE SCANNER</h2>
-    <div id="map"></div>
-    <div class="gauge">
-        <div id="status" style="font-size: 0.7rem; color: var(--primary); margin-bottom: 5px;">READY</div>
-        <div class="speed-value" id="speed">0</div>
-        <div style="font-size: 0.8rem; color: #8b9bb4;">MBPS</div>
-        <div class="led-bar" id="bar"></div>
+<div class="container">
+    <h2>REAL-WORLD SPEED</h2>
+    <div id="status">SẴN SÀNG</div>
+    
+    <div class="speed-box">
+        <span class="unit-main">TỐC ĐỘ MẠNG</span>
+        <div id="speed-mbps">0</div>
+        <span class="unit-main">Mbps</span>
+        
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #334155;">
+            <span style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase;">Tốc độ tải file thực tế:</span><br>
+            <span id="speed-mbs">0.00</span> <span class="unit-sub">MB/s</span>
+        </div>
     </div>
-    <div class="results">
-        <div class="res-box"><div>Ping</div><div id="ping" style="color:var(--danger)">--</div></div>
-        <div class="res-box"><div>Down</div><div id="down" style="color:var(--secondary)">--</div></div>
-        <div class="res-box"><div>Elapsed</div><div id="time" style="color:var(--primary)">0m</div></div>
+
+    <div class="stats-grid">
+        <div class="stat-box">
+            <div class="stat-label">Ping</div>
+            <div class="stat-val"><span id="ping-val">--</span> <span class="ms">ms</span></div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Jitter</div>
+            <div class="stat-val"><span id="jitter-val">--</span> <span class="ms">ms</span></div>
+        </div>
     </div>
-    <button class="btn" id="startBtn" onclick="startInfinityScan()">Start 60m Test</button>
-    <button class="btn" id="stopBtn" onclick="stopScan()">Emergency Stop</button>
+
+    <button id="btn" class="btn-start" onclick="toggleTest()">BẮT ĐẦU ĐO (1 LUỒNG)</button>
 </div>
 
 <script>
-    const map = L.map('map', { attributionControl: false, zoomControl: false }).setView([10.7626, 106.6601], 15);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-
-    let isScanning = false;
+    let isTesting = false;
+    let xhr = null;
     let totalBytes = 0;
-    let startTime;
+    let lastTotalBytes = 0;
+    let lastTime = 0;
+    let speedHistory = []; 
 
-    async function startInfinityScan() {
-        isScanning = true;
-        startTime = Date.now();
-        document.getElementById('startBtn').style.display = 'none';
-        document.getElementById('stopBtn').style.display = 'block';
+    let lastPing = null;
+    let jitterTotal = 0;
+    let jitterCount = 0;
+
+    function toggleTest() {
+        const btn = document.getElementById('btn');
+        const statusEl = document.getElementById('status');
+
+        if (isTesting) {
+            // DỪNG ĐO
+            isTesting = false;
+            if (xhr) xhr.abort();
+            
+            btn.className = "btn-start";
+            btn.innerText = "BẮT ĐẦU ĐO (1 LUỒNG)";
+            statusEl.innerText = "Đã ngắt kết nối";
+            document.getElementById('speed-mbps').style.color = "#94a3b8";
+            document.getElementById('speed-mbs').style.color = "#94a3b8";
+            return;
+        }
+
+        // BẮT ĐẦU ĐO
+        isTesting = true;
+        totalBytes = 0; lastTotalBytes = 0; speedHistory = [];
+        lastPing = null; jitterTotal = 0; jitterCount = 0;
+
+        btn.className = "btn-stop";
+        btn.innerText = "DỪNG ĐO";
+        document.getElementById('speed-mbps').style.color = "#22c55e";
+        document.getElementById('speed-mbs').style.color = "#00f2fe";
+        document.getElementById('speed-mbps').innerText = "0";
+        document.getElementById('speed-mbs').innerText = "0.00";
+        document.getElementById('ping-val').innerText = "--";
+        document.getElementById('jitter-val').innerText = "--";
+        statusEl.innerText = "ĐANG ĐO TỐC ĐỘ THỰC TẾ...";
+
+        lastTime = Date.now();
+        startSingleThread();
+        requestAnimationFrame(updateUI);
+        runPingLoop();
+    }
+
+    // Mở đúng 1 luồng kết nối (Mô phỏng tải 1 file thực tế)
+    function startSingleThread() {
+        if (!isTesting) return;
+        xhr = new XMLHttpRequest();
         
-        // Đo Ping ban đầu
-        const pStart = Date.now();
-        try { await fetch('https://www.google.com/generate_204', { mode: 'no-cors' }); } catch(e){}
-        document.getElementById('ping').innerText = (Date.now() - pStart) + "ms";
-
-        updateLoop();
-        downloadLoop();
-    }
-
-    function stopScan() {
-        isScanning = false;
-        location.reload();
-    }
-
-    function updateLoop() {
-        if (!isScanning) return;
-        const elapsed = (Date.now() - startTime) / 1000;
-        const mbps = ((totalBytes * 8) / (elapsed * 1024 * 1024)).toFixed(1);
+        // Tải file 50MB
+        const testUrl = "https://speed.cloudflare.com/__down?bytes=50000000&r=" + Math.random();
+        xhr.open('GET', testUrl, true);
         
-        document.getElementById('speed').innerText = Math.floor(mbps);
-        document.getElementById('down').innerText = mbps;
-        document.getElementById('bar').style.width = Math.min((mbps / 100) * 100, 100) + "%";
-        document.getElementById('time').innerText = Math.floor(elapsed / 60) + "m " + Math.floor(elapsed % 60) + "s";
-        document.getElementById('status').innerText = "CORE SCANNING ACTIVE...";
-
-        if (elapsed < 3600) requestAnimationFrame(updateLoop); // Chạy tối đa 60 phút
-        else stopScan();
+        let lastLoaded = 0;
+        xhr.onprogress = function(event) {
+            if (!isTesting) return;
+            const chunk = event.loaded - lastLoaded;
+            totalBytes += chunk; 
+            lastLoaded = event.loaded;
+        };
+        
+        // Tải xong tự động nối tiếp
+        xhr.onload = function() { if (isTesting) startSingleThread(); };
+        xhr.onerror = function() { if (isTesting) setTimeout(startSingleThread, 1000); };
+        xhr.send();
     }
 
-    async function downloadLoop() {
-        while (isScanning) {
+    // Tính toán hiển thị
+    function updateUI() {
+        if (!isTesting) return;
+        const now = Date.now();
+        const deltaT = (now - lastTime) / 1000;
+
+        // Cập nhật mỗi 0.25 giây
+        if (deltaT >= 0.25) {
+            const deltaBytes = totalBytes - lastTotalBytes;
+            
+            // Tính Megabyte/giây (MB/s) - Tốc độ hiển thị khi tải file
+            const currentMBs = (deltaBytes / (deltaT * 1024 * 1024));
+            
+            // Tính Megabit/giây (Mbps) - Tốc độ chuẩn nhà mạng
+            const currentMbps = currentMBs * 8;
+            
+            // Làm mượt số liệu
+            speedHistory.push({ mbps: currentMbps, mbs: currentMBs });
+            if (speedHistory.length > 4) speedHistory.shift();
+            
+            const avgMbps = speedHistory.reduce((a, b) => a + b.mbps, 0) / speedHistory.length;
+            const avgMBs = speedHistory.reduce((a, b) => a + b.mbs, 0) / speedHistory.length;
+            
+            // Hiển thị ra màn hình
+            document.getElementById('speed-mbps').innerText = avgMbps.toFixed(0);
+            document.getElementById('speed-mbs').innerText = avgMBs.toFixed(2);
+            
+            lastTotalBytes = totalBytes;
+            lastTime = now;
+        }
+        requestAnimationFrame(updateUI);
+    }
+
+    // Luồng đo Ping & Jitter
+    async function runPingLoop() {
+        while (isTesting) {
+            const pStart = Date.now();
             try {
-                const response = await fetch('https://cloudflare.com/cdn-cgi/trace?p=' + Date.now(), { cache: 'no-store' });
-                const reader = response.body.getReader();
-                while (true) {
-                    const {done, value} = await reader.read();
-                    if (done || !isScanning) break;
-                    totalBytes += value.length;
+                await fetch('https://cloudflare.com/cdn-cgi/trace?r=' + Math.random(), { cache: 'no-store' });
+                const ping = Date.now() - pStart;
+                document.getElementById('ping-val').innerText = ping;
+
+                if (lastPing !== null) {
+                    const jitter = Math.abs(ping - lastPing);
+                    jitterTotal += jitter;
+                    jitterCount++;
+                    document.getElementById('jitter-val').innerText = (jitterTotal / jitterCount).toFixed(0);
                 }
-            } catch(e) { 
-                await new Promise(r => setTimeout(r, 1000)); // Nghỉ 1s nếu lỗi mạng
-            }
+                lastPing = ping;
+            } catch (e) {}
+            await new Promise(r => setTimeout(r, 1000)); // Đo ping mỗi 1 giây
         }
     }
 </script>
