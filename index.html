@@ -2,141 +2,149 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Speedtest - iOS Experience</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Speedtest - Mobile Optimized</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
-        /* --- FONT & BIẾN GIAO DIỆN CHUẨN APPLE --- */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        /* Reset toàn bộ box-model để chống tràn viền trên Android */
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent; /* Tắt viền xanh khi chạm trên Android */
+        }
+        
         :root {
-            /* Mặc định là Light Mode */
-            --apple-blue: #007AFF;
-            --text-main: #1D1D1F;
-            --text-muted: #86868B;
-            --glass-bg: rgba(255, 255, 255, 0.65);
-            --glass-border: rgba(255, 255, 255, 0.5);
-            --inner-bg: rgba(255, 255, 255, 0.6);
-            --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.12);
+            --text-main: #1d1d1f;
+            --text-muted: #86868b;
+            --bg-body: url('https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?q=80&w=2500&auto=format&fit=crop') center/cover no-repeat fixed;
+            --card-bg: rgba(255, 255, 255, 0.85); 
+            --card-border: rgba(255, 255, 255, 0.4);
+            --shadow-soft: 0 10px 40px rgba(0, 0, 0, 0.08);
+            --accent: #0071e3; 
+            --accent-hover: #0077ed;
+            --btn-text: #ffffff;
+            --inner-card: rgba(0, 0, 0, 0.03);
+            --map-border: rgba(0, 0, 0, 0.08);
             --chart-grid: rgba(0, 0, 0, 0.05);
-            /* Ảnh nền núi đồi phong cảnh hùng vĩ */
-            --bg-body: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2670&auto=format&fit=crop') center/cover no-repeat fixed;
         }
 
-        /* --- THEME TỐI (DARK MODE) --- */
         body.dark-theme {
-            --apple-blue: #0A84FF;
-            --text-main: #F5F5F7;
-            --text-muted: rgba(235, 235, 245, 0.6);
-            --glass-bg: rgba(30, 30, 30, 0.65);
-            --glass-border: rgba(255, 255, 255, 0.15);
-            --inner-bg: rgba(120, 120, 128, 0.16); /* Màu xám đặc trưng của iOS Dark Mode */
+            --text-main: #f5f5f7;
+            --text-muted: #a1a1a6;
+            --card-bg: rgba(28, 28, 30, 0.85); 
+            --card-border: rgba(255, 255, 255, 0.1);
             --shadow-soft: 0 10px 40px rgba(0, 0, 0, 0.5);
+            --accent: #0a84ff; 
+            --accent-hover: #409cff;
+            --inner-card: rgba(255, 255, 255, 0.05);
+            --map-border: rgba(255, 255, 255, 0.1);
             --chart-grid: rgba(255, 255, 255, 0.05);
         }
 
         body { 
             background: var(--bg-body); color: var(--text-main); 
-            /* Font chữ hệ thống của Apple */
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            min-height: 100vh; margin: 0; padding: 15px; 
-            transition: color 0.4s; overflow: hidden; 
+            /* Dùng dvh thay vì vh để khít với thanh điều hướng Android */
+            min-height: 100dvh; 
+            margin: 0; padding: 15px; 
+            transition: color 0.4s; overflow-x: hidden; 
         }
         
-        /* BẢNG CHÍNH ĐẬM CHẤT WIDGET iOS */
         .apple-panel { 
-            background: var(--glass-bg); 
-            /* Kỹ thuật làm mờ siêu cấp của Apple */
-            backdrop-filter: blur(40px) saturate(180%); 
-            -webkit-backdrop-filter: blur(40px) saturate(180%); 
-            width: 100%; max-width: 380px; border-radius: 32px; padding: 30px 25px; 
+            background: var(--card-bg); backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%); 
+            width: 100%; max-width: 420px; border-radius: 32px; padding: 25px 20px; 
             box-shadow: var(--shadow-soft); border: 1px solid var(--glass-border); 
             position: relative; transition: all 0.4s ease; z-index: 2; 
         }
 
-        h2 { text-align: center; margin: 0 0 25px 0; font-weight: 700; font-size: 1.4rem; letter-spacing: -0.5px; }
+        h2 { text-align: center; margin: 0 0 20px 0; font-weight: 700; font-size: 1.4rem; letter-spacing: -0.5px; }
 
-        .header-row { display: flex; align-items: stretch; justify-content: space-between; gap: 15px; margin-bottom: 20px; }
+        .header-row { display: flex; align-items: stretch; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
         
-        .info-panel { flex: 1; background: var(--inner-bg); border-radius: 22px; padding: 16px; display: flex; flex-direction: column; justify-content: center; transition: 0.4s; }
-        .info-row { display: flex; flex-direction: column; margin-bottom: 12px; }
+        .info-panel { flex: 1; background: var(--inner-card); border-radius: 22px; padding: 15px; display: flex; flex-direction: column; justify-content: center; transition: 0.4s; min-width: 0; /* Ép không tràn chữ */ }
+        .info-row { display: flex; flex-direction: column; margin-bottom: 10px; }
         .info-row:last-child { margin-bottom: 0; }
-        .info-label { color: var(--text-muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
-        .info-val { font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.3px; }
+        .info-label { color: var(--text-muted); font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+        .info-val { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* Khối bản đồ */
-        #map { width: 95px; height: 95px; border-radius: 22px; border: 1px solid var(--glass-border); z-index: 10; flex-shrink: 0; background: #e5e5e5; }
+        #map { width: 85px; height: 85px; border-radius: 20px; border: 1px solid var(--glass-border); z-index: 10; flex-shrink: 0; background: #e5e5e5; }
         .leaflet-control-attribution { display: none !important; }
 
-        /* Icon Bản đồ kiểu Radar Xanh Apple */
         .custom-map-icon { position: relative; }
-        .radar-center { width: 14px; height: 14px; background-color: var(--apple-blue); border-radius: 50%; position: absolute; top: -7px; left: -7px; border: 2.5px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 2; }
-        .radar-ring { width: 32px; height: 32px; border-radius: 50%; background-color: var(--apple-blue); position: absolute; top: -16px; left: -16px; animation: pulse 2s infinite ease-out; opacity: 0; z-index: 1; }
+        .radar-center { width: 14px; height: 14px; background-color: var(--accent); border-radius: 50%; position: absolute; top: -7px; left: -7px; border: 2.5px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 2; }
+        .radar-ring { width: 32px; height: 32px; border-radius: 50%; background-color: var(--accent); position: absolute; top: -16px; left: -16px; animation: pulse 2s infinite ease-out; opacity: 0; z-index: 1; }
         @keyframes pulse { 0% { transform: scale(0.5); opacity: 0.5; } 100% { transform: scale(2.2); opacity: 0; } }
 
-        .top-stats { display: flex; gap: 15px; margin-bottom: 20px; }
-        .mini-box { flex: 1; background: var(--inner-bg); padding: 16px; border-radius: 22px; text-align: center; transition: 0.4s; }
-        .mini-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-        .mini-val { font-size: 1.5rem; font-weight: 700; margin-top: 5px; color: var(--text-main); letter-spacing: -0.5px; }
-        .unit { font-size: 0.85rem; font-weight: 500; color: var(--text-muted); }
+        .top-stats { display: flex; gap: 12px; margin-bottom: 20px; }
+        .mini-box { flex: 1; background: var(--inner-card); padding: 15px 10px; border-radius: 22px; text-align: center; transition: 0.4s; }
+        .mini-label { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .mini-val { font-size: 1.4rem; font-weight: 700; margin-top: 5px; color: var(--text-main); letter-spacing: -0.5px; }
+        .unit { font-size: 0.8rem; font-weight: 500; color: var(--text-muted); }
 
-        .speed-zone { background: var(--inner-bg); border-radius: 24px; padding: 30px 20px; margin-bottom: 20px; text-align: center; transition: 0.4s; }
-        .zone-title { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
+        .speed-zone { background: var(--inner-card); border-radius: 24px; padding: 25px 15px; margin-bottom: 20px; text-align: center; transition: 0.4s; }
+        .zone-title { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
         
         .speed-display { display: flex; justify-content: center; align-items: baseline; gap: 6px; margin-bottom: 5px; }
-        .speed-mbps { font-size: 5rem; font-weight: 700; letter-spacing: -2px; line-height: 1; color: var(--text-main); transition: color 0.3s; }
-        .speed-unit { font-size: 1.2rem; font-weight: 600; color: var(--text-muted); }
-        .active-zone .speed-mbps { color: var(--apple-blue); }
+        .speed-mbps { font-size: 4.5rem; font-weight: 700; letter-spacing: -2px; line-height: 1; color: var(--text-main); transition: color 0.3s; }
+        .speed-unit { font-size: 1.1rem; font-weight: 600; color: var(--text-muted); }
+        .active-zone .speed-mbps { color: var(--accent); }
         
-        .speed-mbs { font-size: 1rem; color: var(--text-muted); font-weight: 500; border-top: 1px solid var(--glass-border); padding-top: 10px; margin-top: 5px; }
+        .speed-mbs { font-size: 0.95rem; color: var(--text-muted); font-weight: 500; border-top: 1px solid var(--glass-border); padding-top: 10px; margin-top: 5px; }
 
-        #status-txt { text-align: center; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 15px; height: 15px; }
+        #status-txt { text-align: center; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 15px; height: 15px; }
         
-        button.main-btn { background: var(--apple-blue); color: #fff; border: none; padding: 18px; font-size: 1.1rem; font-weight: 600; border-radius: 20px; cursor: pointer; width: 100%; transition: all 0.2s ease; letter-spacing: 0.5px; }
+        button.main-btn { background: var(--accent); color: #fff; border: none; padding: 16px; font-size: 1.1rem; font-weight: 600; border-radius: 20px; cursor: pointer; width: 100%; transition: all 0.2s ease; letter-spacing: 0.5px; }
         button.main-btn:hover { filter: brightness(1.1); transform: scale(0.98); }
 
-        /* --- NÚT SETTING GÓC PHẢI TRÊN CÙNG --- */
         .settings-btn { 
-            position: fixed; top: 20px; right: 20px; 
-            width: 44px; height: 44px; border-radius: 50%; 
-            background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            position: fixed; top: 15px; right: 15px; 
+            width: 40px; height: 40px; border-radius: 50%; 
+            background: var(--card-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             display: flex; align-items: center; justify-content: center;
-            font-size: 1.3rem; cursor: pointer; color: var(--text-main); 
-            box-shadow: var(--shadow-soft); border: 1px solid var(--glass-border);
+            font-size: 1.2rem; cursor: pointer; color: var(--text-main); 
+            box-shadow: var(--shadow-soft); border: 1px solid var(--card-border);
             transition: 0.3s; z-index: 100; 
         }
-        .settings-btn:hover { transform: rotate(45deg); }
         
-        /* --- MODAL CHUNG --- */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); backdrop-filter: blur(5px); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .modal-overlay.show { opacity: 1; pointer-events: auto; }
-        .modal-content { background: var(--glass-bg); backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%); padding: 30px; border-radius: 32px; border: 1px solid var(--glass-border); width: 85%; max-width: 380px; box-shadow: var(--shadow-soft); transform: translateY(40px) scale(0.95); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .modal-content { background: var(--card-bg); backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%); padding: 25px; border-radius: 28px; border: 1px solid var(--glass-border); width: 90%; max-width: 380px; box-shadow: var(--shadow-soft); transform: translateY(40px) scale(0.95); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); max-height: 90vh; overflow-y: auto; }
         .modal-overlay.show .modal-content { transform: translateY(0) scale(1); }
         
-        .modal-content h3 { margin-top: 0; text-align: center; color: var(--text-main); font-weight: 700; font-size: 1.2rem; }
+        .modal-content h3 { margin-top: 0; text-align: center; color: var(--text-main); font-weight: 700; font-size: 1.1rem; }
         
-        /* BẢNG PHÂN TÍCH KẾT QUẢ */
-        .result-stats { display: flex; gap: 15px; margin-bottom: 20px; }
-        .res-box { flex: 1; background: var(--inner-bg); padding: 16px; border-radius: 22px; text-align: center; }
-        .res-val { font-size: 1.8rem; font-weight: 700; color: var(--text-main); letter-spacing: -1px; }
-        .res-lbl { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 5px; }
+        .result-stats { display: flex; gap: 12px; margin-bottom: 20px; }
+        .res-box { flex: 1; background: var(--inner-bg); padding: 12px; border-radius: 20px; text-align: center; }
+        .res-val { font-size: 1.5rem; font-weight: 700; color: var(--text-main); letter-spacing: -1px; }
+        .res-lbl { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 2px; }
 
-        .chart-container { width: 100%; height: 180px; margin: 20px 0; padding: 10px; }
+        .chart-container { width: 100%; height: 160px; margin: 15px 0; padding: 5px; }
         
-        .set-group { margin-bottom: 20px; }
-        .set-group label { display: block; font-size: 0.85rem; margin-bottom: 8px; font-weight: 500; color: var(--text-muted); }
-        .set-group select { width: 100%; padding: 12px 15px; border-radius: 14px; background: var(--inner-bg); color: var(--text-main); border: 1px solid var(--glass-border); font-family: inherit; font-size: 1rem; cursor: pointer; outline: none; appearance: none; }
+        .set-group { margin-bottom: 15px; }
+        .set-group label { display: block; font-size: 0.8rem; margin-bottom: 5px; font-weight: 600; color: var(--text-muted); }
+        .set-group select { width: 100%; padding: 12px; border-radius: 14px; background: var(--inner-bg); color: var(--text-main); border: 1px solid var(--glass-border); font-family: inherit; font-size: 0.95rem; outline: none; appearance: none; }
         
-        .modal-btn { background: var(--inner-bg); color: var(--apple-blue); border: none; padding: 16px; width: 100%; border-radius: 18px; cursor: pointer; font-weight: 600; font-size: 1.05rem; transition: 0.2s; }
+        .modal-btn { background: var(--inner-bg); color: var(--accent); border: none; padding: 15px; width: 100%; border-radius: 18px; cursor: pointer; font-weight: 600; font-size: 1rem; transition: 0.2s; }
         .modal-btn:hover { filter: brightness(0.9); }
 
-        /* Sóng click màn hình (Neon) */
-        .click-ripple { position: fixed; border-radius: 50%; border: 2px solid var(--apple-blue); transform: translate(-50%, -50%); animation: rippleEffect 0.6s ease-out forwards; pointer-events: none; z-index: 9999; box-shadow: 0 0 10px var(--apple-blue); }
+        .click-ripple { position: fixed; border-radius: 50%; border: 2px solid var(--accent); transform: translate(-50%, -50%); animation: rippleEffect 0.6s ease-out forwards; pointer-events: none; z-index: 9999; box-shadow: 0 0 10px var(--accent); }
         @keyframes rippleEffect { 0% { width: 0px; height: 0px; opacity: 1; border-width: 3px; } 100% { width: 120px; height: 120px; opacity: 0; border-width: 0px; } }
+
+        /* ĐIỀU CHỈNH RIÊNG CHO MÀN HÌNH NHỎ (Điện thoại Android hẹp) */
+        @media (max-width: 380px) {
+            .apple-panel { padding: 20px 15px; border-radius: 24px; }
+            .speed-mbps { font-size: 3.8rem; }
+            #map { width: 75px; height: 75px; }
+            .mini-val { font-size: 1.2rem; }
+            .info-val { font-size: 0.9rem; }
+            button.main-btn { padding: 14px; font-size: 1rem; }
+        }
     </style>
 </head>
 <body>
@@ -243,7 +251,6 @@
 </div>
 
 <script>
-    // Click Ripple Effect
     document.addEventListener('click', function(e) {
         if(e.target.closest('.modal-overlay') || e.target.closest('.leaflet-container') || e.target.closest('.settings-btn')) return;
         let ripple = document.createElement('div');
@@ -306,7 +313,6 @@
         if(speedChartInstance) { speedChartInstance.update(); }
     }
 
-    // Map Base layers
     const lightMapUrl = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
     const darkMapUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
     let currentTileLayer;
@@ -333,7 +339,7 @@
     window.onload = function() {
         applyLanguage();
         map = L.map('map', { zoomControl: false, attributionControl: false }).setView([16.0, 108.0], 5);
-        currentTileLayer = L.tileLayer(lightMapUrl).addTo(map); // Default Light map
+        currentTileLayer = L.tileLayer(lightMapUrl).addTo(map);
 
         fetch('https://get.geojs.io/v1/ip/geo.json').then(res => res.json()).then(data => {
             document.getElementById('isp-val').innerText = data.organization_name || data.organization || i18n[currentLang].Unknown;
