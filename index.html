@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Speedtest - iOS Experience</title>
+    <title>Speed Test - iOS Experience</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -29,7 +29,6 @@
             --btn-text: #ffffff;
             --inner-card: rgba(0, 0, 0, 0.03);
             --map-border: rgba(0, 0, 0, 0.08);
-            --chart-grid: rgba(0, 0, 0, 0.05);
         }
 
         body.dark-theme {
@@ -42,7 +41,6 @@
             --accent-hover: #409cff;
             --inner-card: rgba(255, 255, 255, 0.05);
             --map-border: rgba(255, 255, 255, 0.1);
-            --chart-grid: rgba(255, 255, 255, 0.05);
         }
 
         body { 
@@ -61,9 +59,49 @@
             position: relative; transition: all 0.4s ease; z-index: 2; 
         }
 
-        h2 { text-align: center; margin: 0 0 20px 0; font-weight: 700; font-size: 1.4rem; letter-spacing: -0.5px; }
+        /* --- KHỐI TIÊU ĐỀ & THANH CÀI ĐẶT --- */
+        .title-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 25px;
+        }
 
-        /* ĐÃ SỬA align-items: center ĐỂ BẢN ĐỒ VÀ CHỮ CĂN GIỮA NHAU */
+        h2 { 
+            margin: 0 0 10px 0; 
+            font-weight: 800; 
+            font-size: 1.5rem; 
+            letter-spacing: 2px; /* Cách chữ rộng ra cho thoáng */
+            text-transform: uppercase;
+        }
+
+        /* Thanh Cài Đặt (Pill-bar) Nằm dưới chữ */
+        .settings-bar {
+            background: var(--inner-card);
+            border: 1px solid var(--glass-border);
+            padding: 6px 18px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .settings-bar:hover {
+            background: var(--card-border);
+            color: var(--text-main);
+            transform: scale(0.96);
+        }
+
+        .settings-icon { font-size: 0.9rem; }
+
+        /* --- CÁC THÀNH PHẦN KHÁC --- */
         .header-row { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 20px; }
         
         .info-panel { flex: 1; background: var(--inner-card); border-radius: 22px; padding: 15px 16px; display: flex; flex-direction: column; justify-content: center; transition: 0.4s; min-width: 0; }
@@ -72,7 +110,6 @@
         .info-label { color: var(--text-muted); font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
         .info-val { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* Chỉnh kích thước và góc bo bản đồ cho đồng nhất khối text */
         #map { width: 90px; height: 90px; border-radius: 22px; border: 1px solid var(--glass-border); z-index: 10; flex-shrink: 0; background: #e5e5e5; }
         .leaflet-control-attribution { display: none !important; }
 
@@ -102,16 +139,7 @@
         button.main-btn { background: var(--accent); color: #fff; border: none; padding: 16px; font-size: 1.1rem; font-weight: 600; border-radius: 20px; cursor: pointer; width: 100%; transition: all 0.2s ease; letter-spacing: 0.5px; }
         button.main-btn:hover { filter: brightness(1.1); transform: scale(0.98); }
 
-        .settings-btn { 
-            position: fixed; top: 15px; right: 15px; 
-            width: 40px; height: 40px; border-radius: 50%; 
-            background: var(--card-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.2rem; cursor: pointer; color: var(--text-main); 
-            box-shadow: var(--shadow-soft); border: 1px solid var(--card-border);
-            transition: 0.3s; z-index: 100; 
-        }
-        
+        /* --- MODAL CHUNG --- */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .modal-overlay.show { opacity: 1; pointer-events: auto; }
         .modal-content { background: var(--card-bg); backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%); padding: 25px; border-radius: 28px; border: 1px solid var(--glass-border); width: 90%; max-width: 380px; box-shadow: var(--shadow-soft); transform: translateY(40px) scale(0.95); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); max-height: 90vh; overflow-y: auto; }
@@ -151,8 +179,6 @@
 <audio id="myAudio" loop preload="auto">
     <source src="loilam.mp3" type="audio/mpeg">
 </audio>
-
-<div class="settings-btn" onclick="toggleModal('set-modal')">⚙️</div>
 
 <div class="modal-overlay" id="set-modal">
     <div class="modal-content">
@@ -209,7 +235,13 @@
 </div>
 
 <div class="apple-panel">
-    <h2 id="app-title">SPEEDTEST</h2>
+    
+    <div class="title-container">
+        <h2 id="app-title">SPEED TEST</h2>
+        <div class="settings-bar" onclick="toggleModal('set-modal')">
+            <span class="settings-icon">⚙️</span> <span id="lbl-settings-btn">CÀI ĐẶT</span>
+        </div>
+    </div>
     
     <div class="header-row">
         <div class="info-panel">
@@ -250,9 +282,8 @@
 </div>
 
 <script>
-    // Click Ripple Effect
     document.addEventListener('click', function(e) {
-        if(e.target.closest('.modal-overlay') || e.target.closest('.leaflet-container') || e.target.closest('.settings-btn')) return;
+        if(e.target.closest('.modal-overlay') || e.target.closest('.leaflet-container') || e.target.closest('.settings-bar')) return;
         let ripple = document.createElement('div');
         ripple.className = 'click-ripple';
         ripple.style.left = e.clientX + 'px';
@@ -263,7 +294,7 @@
 
     const i18n = {
         vi: {
-            appTitle: "SPEEDTEST", loc: "Vị trí", isp: "Nhà mạng", dl: "Download",
+            appTitle: "SPEED TEST", settingsBtn: "CÀI ĐẶT", loc: "Vị trí", isp: "Nhà mạng", dl: "Download",
             ready: "Sẵn sàng", pinging: "Đang kiểm tra độ trễ...", testing: "Đang phân tích mạng...",
             done: "Hoàn tất", stopped: "Đã dừng", startBtn: "Bắt đầu đo", stopBtn: "Dừng lại", retryBtn: "Đo lại",
             locDef: "Cấp quyền GPS...", ispDef: "Đang quét...", Unknown: "Không rõ",
@@ -273,7 +304,7 @@
             resTitle: "Báo Cáo Phân Tích", resAvg: "Trung bình", resData: "Tổng tải", btnCloseRes: "Xong"
         },
         en: {
-            appTitle: "SPEEDTEST", loc: "Location", isp: "Provider", dl: "Download",
+            appTitle: "SPEED TEST", settingsBtn: "SETTINGS", loc: "Location", isp: "Provider", dl: "Download",
             ready: "Ready", pinging: "Measuring latency...", testing: "Analyzing network...",
             done: "Complete", stopped: "Stopped", startBtn: "Start Test", stopBtn: "Stop", retryBtn: "Test Again",
             locDef: "Allow GPS...", ispDef: "Scanning...", Unknown: "Unknown",
@@ -289,6 +320,7 @@
     function applyLanguage() {
         currentLang = document.getElementById('sel-lang').value; const t = i18n[currentLang];
         document.getElementById('app-title').innerText = t.appTitle;
+        document.getElementById('lbl-settings-btn').innerText = t.settingsBtn;
         document.getElementById('lbl-loc').innerText = t.loc; document.getElementById('lbl-isp').innerText = t.isp;
         document.getElementById('lbl-dl').innerText = t.dl;
         if(!isTesting) {
@@ -412,12 +444,12 @@
         const ctx = document.getElementById('speedChart').getContext('2d');
         
         let isDark = document.body.classList.contains('dark-theme');
-        let accentColor = isDark ? '#0A84FF' : '#007AFF';
+        let accentColor = isDark ? '#0A84FF' : '#0071e3';
         let gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
         let textColor = isDark ? '#a1a1a6' : '#86868b';
 
         let gradient = ctx.createLinearGradient(0, 0, 0, 150);
-        gradient.addColorStop(0, isDark ? 'rgba(10, 132, 255, 0.4)' : 'rgba(0, 122, 255, 0.3)');
+        gradient.addColorStop(0, isDark ? 'rgba(10, 132, 255, 0.4)' : 'rgba(0, 113, 227, 0.3)');
         gradient.addColorStop(1, 'rgba(10, 132, 255, 0)');
 
         let labels = fullChartData.map((_, i) => i); 
