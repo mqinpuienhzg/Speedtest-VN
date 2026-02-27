@@ -39,7 +39,6 @@
 
         h2 { text-align: center; margin: 0 0 25px 0; font-weight: 800; font-size: 1.6rem; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
 
-        /* HEADER ROW: Căn chỉnh Bản đồ và Thông tin nằm ngang hoàn hảo */
         .header-row { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 25px; }
 
         .info-panel { flex: 1; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--glass-border); border-radius: 20px; padding: 15px; }
@@ -54,7 +53,7 @@
             border: 2px solid var(--glass-border);
             box-shadow: 0 10px 20px rgba(0,0,0,0.3);
             z-index: 10; background: #e5e5e5;
-            flex-shrink: 0; /* Đảm bảo bản đồ không bị bóp méo */
+            flex-shrink: 0; 
         }
         .leaflet-control-attribution { display: none !important; }
 
@@ -69,5 +68,281 @@
         
         .zone-title { font-size: 0.9rem; font-weight: 500; color: var(--text-muted); margin-bottom: 5px; letter-spacing: 2px; text-transform: uppercase; }
         
-        /* Cụm hiển thị số và chữ Mbps */
-        .speed-display { display: flex; justify-content: center; align-items
+        .speed-display { display: flex; justify-content: center; align-items: baseline; gap: 8px; margin-bottom: 5px; }
+        .speed-mbps { font-size: 5rem; font-weight: 800; line-height: 1; transition: color 0.3s; }
+        .speed-unit { font-size: 1.5rem; font-weight: 700; color: var(--text-muted); transition: color 0.3s; }
+        
+        .active-zone .speed-mbps, .active-zone .speed-unit { color: var(--accent); text-shadow: 0 0 20px rgba(56, 189, 248, 0.5); }
+        
+        .speed-mbs { font-size: 1.1rem; color: var(--text-muted); font-weight: 500; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: 5px; }
+
+        #status-txt { text-align: center; font-size: 0.85rem; font-weight: 500; color: var(--text-muted); margin-bottom: 20px; letter-spacing: 1px; height: 15px; text-transform: uppercase; transition: 0.3s; }
+        
+        button { background: rgba(255, 255, 255, 0.1); color: var(--text-main); border: 1px solid var(--glass-border); padding: 18px; font-size: 1.1rem; font-weight: 700; font-family: 'Poppins', sans-serif; border-radius: 16px; cursor: pointer; width: 100%; text-transform: uppercase; transition: all 0.3s ease; letter-spacing: 2px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); backdrop-filter: blur(10px); }
+        button:hover { background: var(--text-main); color: #000; box-shadow: 0 15px 25px rgba(0,0,0,0.3); transform: translateY(-3px); }
+        button:active { transform: translateY(1px); }
+    </style>
+</head>
+<body>
+
+<audio id="myAudio" loop preload="auto">
+    <source src="loilam.mp3" type="audio/mpeg">
+</audio>
+
+<div class="glass-panel">
+    <h2>SPEEDTEST</h2>
+
+    <div class="header-row">
+        <div class="info-panel">
+            <div class="info-row">
+                <span class="info-label">Vị trí</span>
+                <span class="info-val" id="loc-val">Cấp quyền GPS...</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Nhà mạng</span>
+                <span class="info-val" id="isp-val">Đang quét...</span>
+            </div>
+        </div>
+        <div id="map"></div>
+    </div>
+
+    <div class="top-stats">
+        <div class="mini-box">
+            <div class="mini-label">Ping</div>
+            <div class="mini-val"><span id="ping-val">--</span><span class="unit"> ms</span></div>
+        </div>
+        <div class="mini-box">
+            <div class="mini-label">Jitter</div>
+            <div class="mini-val"><span id="jitter-val">--</span><span class="unit"> ms</span></div>
+        </div>
+    </div>
+
+    <div class="speed-zone" id="zone-dl">
+        <div class="zone-title">Download</div>
+        
+        <div class="speed-display">
+            <div class="speed-mbps" id="dl-mbps">0</div>
+            <div class="speed-unit">Mbps</div>
+        </div>
+
+        <div class="speed-mbs"><span id="dl-mbs">0.00</span> <span class="unit">MB/s</span></div>
+    </div>
+
+    <div id="status-txt">Sẵn sàng</div>
+    <button id="btn" onclick="startFullSequence()">Bắt đầu đo</button>
+</div>
+
+<script>
+    let isTesting = false;
+    let phase = ''; 
+    let activeXhrs = [];
+    let totalBytes = 0;
+    let lastBytes = 0;
+    let lastTime = 0;
+    let speedHistory = [];
+    let uiFrame;
+    let map, userMarker;
+
+    window.onload = function() {
+        // 1. Khởi tạo bản đồ
+        map = L.map('map', { zoomControl: false, attributionControl: false }).setView([16.0, 108.0], 5);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
+
+        // 2. Lấy tên Nhà mạng bằng IP (Vì GPS không biết bạn xài mạng gì)
+        fetch('https://get.geojs.io/v1/ip/geo.json')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('isp-val').innerText = data.organization_name || data.organization || "Không rõ";
+                
+                // 3. Yêu cầu bật quyền GPS trên trình duyệt
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            // Thành công: Đã cho phép truy cập vị trí
+                            let lat = position.coords.latitude;
+                            let lon = position.coords.longitude;
+                            updateMap(lat, lon);
+                            
+                            // Dịch tọa độ GPS ra tên Thành phố/Đường (Reverse Geocoding)
+                            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+                                .then(res => res.json())
+                                .then(geoData => {
+                                    let city = geoData.address.city || geoData.address.town || geoData.address.state || "Unknown";
+                                    let country = geoData.address.country_code ? geoData.address.country_code.toUpperCase() : "";
+                                    document.getElementById('loc-val').innerText = `${city}, ${country}`;
+                                }).catch(() => fallbackIPLocation(data)); // Lỗi dịch thì quay về IP
+                        },
+                        (error) => {
+                            // Người dùng từ chối cấp quyền -> Dùng lại vị trí IP dự phòng
+                            fallbackIPLocation(data);
+                        },
+                        { enableHighAccuracy: true, timeout: 5000 }
+                    );
+                } else {
+                    fallbackIPLocation(data);
+                }
+            })
+            .catch(e => {
+                document.getElementById('loc-val').innerText = "Ẩn danh";
+                document.getElementById('isp-val').innerText = "Không xác định";
+            });
+    };
+
+    // Hàm cập nhật bản đồ
+    function updateMap(lat, lon) {
+        map.setView([lat, lon], 14); // Zoom cận cảnh đường phố
+        if (userMarker) map.removeLayer(userMarker);
+        userMarker = L.circleMarker([lat, lon], {
+            radius: 8, fillColor: "#38bdf8", color: "#fff", weight: 2, opacity: 1, fillOpacity: 0.9
+        }).addTo(map);
+    }
+
+    // Hàm dự phòng nếu người dùng không cho phép GPS
+    function fallbackIPLocation(data) {
+        let city = data.city || "Unknown";
+        let country = data.country || "";
+        document.getElementById('loc-val').innerText = `${city}${country ? ', ' + country : ''}`;
+        if (data.latitude && data.longitude) {
+            updateMap(parseFloat(data.latitude), parseFloat(data.longitude));
+        }
+    }
+
+    function resetUI() {
+        document.getElementById('dl-mbps').innerText = "0"; 
+        document.getElementById('dl-mbs').innerText = "0.00";
+        document.getElementById('ping-val').innerText = "--"; 
+        document.getElementById('jitter-val').innerText = "--";
+        document.getElementById('zone-dl').classList.remove('active-zone');
+        document.getElementById('status-txt').style.color = "var(--text-muted)";
+    }
+
+    function startUI() {
+        lastTime = Date.now();
+        lastBytes = totalBytes;
+        speedHistory = [];
+        
+        const loop = () => {
+            if (!isTesting || phase === 'ping') return;
+            let now = Date.now();
+            let deltaT = (now - lastTime) / 1000;
+            if (deltaT >= 0.25) {
+                let deltaBytes = totalBytes - lastBytes;
+                let currentMBs = deltaBytes / (deltaT * 1024 * 1024);
+                let currentMbps = currentMBs * 8;
+                
+                speedHistory.push({ mbps: currentMbps, mbs: currentMBs });
+                if (speedHistory.length > 5) speedHistory.shift();
+                
+                let avgMbps = speedHistory.reduce((a, b) => a + b.mbps, 0) / speedHistory.length;
+                let avgMBs = speedHistory.reduce((a, b) => a + b.mbs, 0) / speedHistory.length;
+                
+                document.getElementById('dl-mbps').innerText = Math.max(0, avgMbps).toFixed(0);
+                document.getElementById('dl-mbs').innerText = Math.max(0, avgMBs).toFixed(2);
+                
+                lastBytes = totalBytes;
+                lastTime = now;
+            }
+            uiFrame = requestAnimationFrame(loop);
+        };
+        uiFrame = requestAnimationFrame(loop);
+    }
+
+    async function startFullSequence() {
+        const musicPlayer = document.getElementById('myAudio');
+
+        if (isTesting) {
+            isTesting = false;
+            activeXhrs.forEach(xhr => xhr.abort());
+            activeXhrs = [];
+            cancelAnimationFrame(uiFrame);
+            
+            musicPlayer.pause();
+            musicPlayer.currentTime = 0; 
+
+            document.getElementById('status-txt').innerText = "Đã dừng";
+            document.getElementById('btn').innerText = "Đo lại";
+            return;
+        }
+
+        isTesting = true;
+        musicPlayer.play().catch(e => console.log("Cần tương tác người dùng để phát nhạc"));
+
+        resetUI();
+        document.getElementById('btn').innerText = "Dừng lại";
+        
+        phase = 'ping';
+        document.getElementById('status-txt').innerText = "Đang kiểm tra độ trễ...";
+        document.getElementById('status-txt').style.color = "var(--accent)";
+        await measurePing(3000);
+        if (!isTesting) return;
+
+        phase = 'dl';
+        totalBytes = 0; 
+        
+        document.getElementById('status-txt').innerText = "TỐC ĐỘ MẠNG HIỆN TẠI";
+        
+        document.getElementById('zone-dl').classList.add('active-zone');
+        startUI();
+        await measureBandwidth(15000);
+        cancelAnimationFrame(uiFrame);
+        document.getElementById('zone-dl').classList.remove('active-zone');
+
+        isTesting = false;
+        document.getElementById('status-txt').innerText = "Hoàn tất";
+        document.getElementById('btn').innerText = "Đo lại";
+    }
+
+    async function measurePing(duration) {
+        let startTime = Date.now();
+        let pings = [];
+        while (Date.now() - startTime < duration && isTesting) {
+            let pStart = Date.now();
+            try {
+                await fetch('https://cloudflare.com/cdn-cgi/trace?r=' + Math.random(), { cache: 'no-store' });
+                let ping = Date.now() - pStart;
+                pings.push(ping);
+                document.getElementById('ping-val').innerText = ping;
+                if (pings.length > 1) {
+                    let jitter = Math.abs(pings[pings.length - 1] - pings[pings.length - 2]);
+                    document.getElementById('jitter-val').innerText = jitter;
+                }
+            } catch (e) {}
+            await new Promise(r => setTimeout(r, 400));
+        }
+    }
+
+    function measureBandwidth(duration) {
+        return new Promise((resolve) => {
+            let startTime = Date.now();
+            let activeThreads = 0;
+            let maxThreads = 4;
+
+            function nextChunk() {
+                if (!isTesting || Date.now() - startTime >= duration) {
+                    if (activeThreads === 0) resolve();
+                    return;
+                }
+                activeThreads++;
+                let xhr = new XMLHttpRequest();
+                activeXhrs.push(xhr);
+                xhr.open('GET', "https://speed.cloudflare.com/__down?bytes=25000000&r=" + Math.random(), true);
+                let chunkLoaded = 0;
+                xhr.onprogress = (e) => {
+                    if (!isTesting) return;
+                    totalBytes += (e.loaded - chunkLoaded);
+                    chunkLoaded = e.loaded;
+                };
+                xhr.send();
+                xhr.onload = xhr.onerror = xhr.onabort = () => { 
+                    activeThreads--;
+                    let idx = activeXhrs.indexOf(xhr);
+                    if(idx > -1) activeXhrs.splice(idx, 1);
+                    nextChunk(); 
+                };
+            }
+            for(let i = 0; i < maxThreads; i++) nextChunk();
+        });
+    }
+</script>
+</body>
+</html>
