@@ -29,6 +29,7 @@
             --btn-text: #ffffff;
             --inner-card: rgba(0, 0, 0, 0.03);
             --map-border: rgba(0, 0, 0, 0.08);
+            --chart-grid: rgba(0, 0, 0, 0.05);
         }
 
         body.dark-theme {
@@ -41,6 +42,7 @@
             --accent-hover: #409cff;
             --inner-card: rgba(255, 255, 255, 0.05);
             --map-border: rgba(255, 255, 255, 0.1);
+            --chart-grid: rgba(255, 255, 255, 0.05);
         }
 
         body { 
@@ -71,11 +73,10 @@
             margin: 0 0 10px 0; 
             font-weight: 800; 
             font-size: 1.5rem; 
-            letter-spacing: 2px; /* Cách chữ rộng ra cho thoáng */
+            letter-spacing: 2px; 
             text-transform: uppercase;
         }
 
-        /* Thanh Cài Đặt (Pill-bar) Nằm dưới chữ */
         .settings-bar {
             background: var(--inner-card);
             border: 1px solid var(--glass-border);
@@ -101,7 +102,6 @@
 
         .settings-icon { font-size: 0.9rem; }
 
-        /* --- CÁC THÀNH PHẦN KHÁC --- */
         .header-row { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 20px; }
         
         .info-panel { flex: 1; background: var(--inner-card); border-radius: 22px; padding: 15px 16px; display: flex; flex-direction: column; justify-content: center; transition: 0.4s; min-width: 0; }
@@ -132,7 +132,8 @@
         .speed-unit { font-size: 1.1rem; font-weight: 600; color: var(--text-muted); }
         .active-zone .speed-mbps { color: var(--accent); }
         
-        .speed-mbs { font-size: 0.95rem; color: var(--text-muted); font-weight: 500; border-top: 1px solid var(--glass-border); padding-top: 10px; margin-top: 5px; }
+        /* Dòng hiển thị MB/s phía dưới */
+        .speed-mbs { font-size: 0.95rem; color: var(--text-muted); font-weight: 500; border-top: 1px solid var(--glass-border); padding-top: 10px; margin-top: 5px; display: block; transition: 0.3s opacity; }
 
         #status-txt { text-align: center; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 15px; height: 15px; }
         
@@ -145,7 +146,7 @@
         .modal-content { background: var(--card-bg); backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%); padding: 25px; border-radius: 28px; border: 1px solid var(--glass-border); width: 90%; max-width: 380px; box-shadow: var(--shadow-soft); transform: translateY(40px) scale(0.95); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); max-height: 90vh; overflow-y: auto; }
         .modal-overlay.show .modal-content { transform: translateY(0) scale(1); }
         
-        .modal-content h3 { margin-top: 0; text-align: center; color: var(--text-main); font-weight: 700; font-size: 1.1rem; }
+        .modal-content h3 { margin-top: 0; text-align: center; color: var(--text-main); font-weight: 700; font-size: 1.1rem; margin-bottom: 20px; }
         
         .result-stats { display: flex; gap: 12px; margin-bottom: 20px; }
         .res-box { flex: 1; background: var(--inner-card); padding: 12px; border-radius: 20px; text-align: center; }
@@ -158,7 +159,7 @@
         .set-group label { display: block; font-size: 0.8rem; margin-bottom: 5px; font-weight: 600; color: var(--text-muted); }
         .set-group select { width: 100%; padding: 12px 15px; border-radius: 14px; background: var(--inner-card); color: var(--text-main); border: 1px solid var(--glass-border); font-family: inherit; font-size: 0.95rem; outline: none; appearance: none; }
         
-        .modal-btn { background: var(--inner-card); color: var(--accent); border: none; padding: 15px; width: 100%; border-radius: 18px; cursor: pointer; font-weight: 600; font-size: 1rem; transition: 0.2s; }
+        .modal-btn { background: var(--inner-card); color: var(--accent); border: none; padding: 15px; width: 100%; border-radius: 18px; cursor: pointer; font-weight: 600; font-size: 1rem; transition: 0.2s; margin-top: 5px; }
         .modal-btn:hover { filter: brightness(0.9); }
 
         .click-ripple { position: fixed; border-radius: 50%; border: 2px solid var(--accent); transform: translate(-50%, -50%); animation: rippleEffect 0.6s ease-out forwards; pointer-events: none; z-index: 9999; box-shadow: 0 0 10px var(--accent); }
@@ -183,6 +184,7 @@
 <div class="modal-overlay" id="set-modal">
     <div class="modal-content">
         <h3 id="set-title">Cài đặt</h3>
+        
         <div class="set-group">
             <label id="lbl-duration">Thời gian đo:</label>
             <select id="sel-duration">
@@ -193,6 +195,15 @@
                 <option value="1800">30 Phút</option>
             </select>
         </div>
+        
+        <div class="set-group">
+            <label id="lbl-show-mbs">Hiển thị tốc độ MB/s:</label>
+            <select id="sel-show-mbs" onchange="applyVisibility()">
+                <option value="show">Hiển thị</option>
+                <option value="hide">Ẩn</option>
+            </select>
+        </div>
+
         <div class="set-group">
             <label id="lbl-theme">Giao diện:</label>
             <select id="sel-theme" onchange="applyTheme()">
@@ -200,6 +211,7 @@
                 <option value="dark">Tối (Dark Mode)</option>
             </select>
         </div>
+        
         <div class="set-group">
             <label id="lbl-lang">Ngôn ngữ:</label>
             <select id="sel-lang" onchange="applyLanguage()">
@@ -207,6 +219,7 @@
                 <option value="en">English</option>
             </select>
         </div>
+        
         <button class="modal-btn" onclick="toggleModal('set-modal')" id="btn-close-set">Lưu & Đóng</button>
     </div>
 </div>
@@ -274,7 +287,7 @@
             <div class="speed-mbps" id="dl-mbps">0</div>
             <div class="speed-unit">Mbps</div>
         </div>
-        <div class="speed-mbs"><span id="dl-mbs">0.00</span> <span class="unit">MB/s</span></div>
+        <div class="speed-mbs" id="mbs-container"><span id="dl-mbs">0.00</span> <span class="unit">MB/s</span></div>
     </div>
 
     <div id="status-txt">Sẵn sàng</div>
@@ -301,7 +314,8 @@
             setTitle: "Cài đặt", lblDur: "Thời gian đo:", lblTheme: "Giao diện:", lblLang: "Ngôn ngữ:",
             btnCloseSet: "Lưu & Đóng", durDef: "Mặc định (15 giây)", dur1m: "1 Phút", dur5m: "5 Phút", dur15m: "15 Phút", dur30m: "30 Phút",
             themeLight: "Sáng (Mặc định)", themeDark: "Tối (Dark Mode)",
-            resTitle: "Báo Cáo Phân Tích", resAvg: "Trung bình", resData: "Tổng tải", btnCloseRes: "Xong"
+            resTitle: "Báo Cáo Phân Tích", resAvg: "Trung bình", resData: "Tổng tải", btnCloseRes: "Xong",
+            lblShowMbs: "Hiển thị tốc độ MB/s:", optShow: "Hiển thị", optHide: "Ẩn"
         },
         en: {
             appTitle: "SPEED TEST", settingsBtn: "SETTINGS", loc: "Location", isp: "Provider", dl: "Download",
@@ -311,7 +325,8 @@
             setTitle: "Settings", lblDur: "Duration:", lblTheme: "Theme:", lblLang: "Language:",
             btnCloseSet: "Save", durDef: "Default (15s)", dur1m: "1 Minute", dur5m: "5 Minutes", dur15m: "15 Minutes", dur30m: "30 Minutes",
             themeLight: "Light Mode", themeDark: "Dark Mode",
-            resTitle: "Analysis Report", resAvg: "Average", resData: "Total Data", btnCloseRes: "Done"
+            resTitle: "Analysis Report", resAvg: "Average", resData: "Total Data", btnCloseRes: "Done",
+            lblShowMbs: "Show MB/s Speed:", optShow: "Show", optHide: "Hide"
         }
     };
     
@@ -335,12 +350,14 @@
         document.getElementById('set-title').innerText = t.setTitle; document.getElementById('lbl-duration').innerText = t.lblDur; 
         document.getElementById('lbl-theme').innerText = t.lblTheme; document.getElementById('lbl-lang').innerText = t.lblLang;
         document.getElementById('btn-close-set').innerText = t.btnCloseSet;
+        document.getElementById('lbl-show-mbs').innerText = t.lblShowMbs;
         
         document.getElementById('res-title').innerText = t.resTitle; document.getElementById('res-lbl-avg').innerText = t.resAvg; 
         document.getElementById('res-lbl-data').innerText = t.resData; document.getElementById('btn-close-res').innerText = t.btnCloseRes;
 
         const durOpts = document.getElementById('sel-duration').options; durOpts[0].text = t.durDef; durOpts[1].text = t.dur1m; durOpts[2].text = t.dur5m; durOpts[3].text = t.dur15m; durOpts[4].text = t.dur30m;
         const themeOpts = document.getElementById('sel-theme').options; themeOpts[0].text = t.themeLight; themeOpts[1].text = t.themeDark;
+        const mbsOpts = document.getElementById('sel-show-mbs').options; mbsOpts[0].text = t.optShow; mbsOpts[1].text = t.optHide;
         
         if(speedChartInstance) { speedChartInstance.update(); }
     }
@@ -361,6 +378,16 @@
         if(speedChartInstance) { drawResultBoard(); } 
     }
 
+    // --- HÀM ẨN HIỆN MB/S ---
+    function applyVisibility() {
+        const mbsContainer = document.getElementById('mbs-container');
+        if (document.getElementById('sel-show-mbs').value === 'hide') {
+            mbsContainer.style.display = 'none';
+        } else {
+            mbsContainer.style.display = 'block';
+        }
+    }
+
     function toggleModal(modalId) { document.getElementById(modalId).classList.toggle('show'); }
 
     let isTesting = false, phase = '', activeXhrs = [], totalBytes = 0, lastBytes = 0, lastTime = 0, speedHistory = [], fullChartData = [], uiFrame, map, userMarker;
@@ -370,6 +397,8 @@
 
     window.onload = function() {
         applyLanguage();
+        applyVisibility(); // Kiểm tra trạng thái ẩn hiện lúc load web
+        
         map = L.map('map', { zoomControl: false, attributionControl: false }).setView([16.0, 108.0], 5);
         currentTileLayer = L.tileLayer(lightMapUrl).addTo(map);
 
