@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CyberSpeed Pro - 15s Mode</title>
+    <title>CyberSpeed Pro V3</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -11,143 +11,104 @@
         :root {
             --bg-color: #050810; --card-bg: #0c1221;
             --primary: #00f2fe; --secondary: #00ff88;
-            --warning: #ffcc00; --danger: #ff4757;
-            --text-main: #ffffff; --text-sec: #8b9bb4; --border: #1a2c42;
+            --danger: #ff4757; --text-main: #ffffff; --border: #1a2c42;
         }
         body {
             font-family: 'Share Tech Mono', monospace;
             background-color: var(--bg-color); color: var(--text-main);
             display: flex; flex-direction: column; align-items: center;
-            min-height: 100vh; margin: 0; padding: 15px;
+            justify-content: center; min-height: 100vh; margin: 0; padding: 15px;
         }
         .cyber-card {
-            width: 100%; max-width: 400px;
-            background-color: var(--card-bg); border-radius: 20px;
-            padding: 20px; border: 1px solid var(--border);
-            text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            width: 100%; max-width: 380px; background: var(--card-bg);
+            border-radius: 20px; padding: 25px; border: 1px solid var(--border);
+            text-align: center; box-shadow: 0 10px 50px rgba(0,0,0,0.9);
         }
         #map {
             width: 100%; height: 160px; border-radius: 12px;
-            margin-bottom: 20px; border: 2px solid var(--primary);
-            box-shadow: 0 0 15px var(--primary);
+            margin-bottom: 20px; border: 1px solid var(--primary);
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
+            background: #000;
         }
-        .rectangular-gauge {
-            width: 100%; height: 140px; background: rgba(255,255,255,0.01);
+        .gauge {
+            width: 100%; height: 130px; background: rgba(255,255,255,0.02);
             border: 1px solid var(--border); border-radius: 10px;
             position: relative; overflow: hidden;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             margin-bottom: 20px;
         }
-        .speed-value { font-size: 4rem; font-weight: 900; text-shadow: 0 0 20px var(--primary); }
-        .led-bar-container { position: absolute; bottom: 0; left: 0; width: 100%; height: 6px; background: rgba(255,255,255,0.05); }
-        .led-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--secondary), var(--primary)); transition: 0.3s; }
-        .results-panel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
-        .res-box { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 10px; border-radius: 8px; }
-        .res-label { font-size: 0.65rem; color: var(--text-sec); text-transform: uppercase; }
-        .btn {
-            width: 100%; padding: 15px; font-family: inherit; font-weight: bold;
-            border: none; cursor: pointer; text-transform: uppercase; border-radius: 5px;
-            background: var(--secondary); color: #000;
+        .speed-value { font-size: 4rem; font-weight: 900; color: var(--text-main); line-height: 1; }
+        .led-bar {
+            position: absolute; bottom: 0; left: 0; width: 0%; height: 5px;
+            background: linear-gradient(90deg, var(--secondary), var(--primary));
+            box-shadow: 0 0 15px var(--primary); transition: 0.1s;
         }
-        .btn:disabled { background: var(--border); color: var(--text-sec); }
+        .results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+        .res-box { background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 10px; border-radius: 8px; }
+        .res-box div:first-child { font-size: 0.6rem; color: #8b9bb4; text-transform: uppercase; }
+        .res-box div:last-child { font-size: 1.1rem; font-weight: bold; margin-top: 5px; }
+        .btn {
+            width: 100%; padding: 18px; font-family: inherit; font-weight: bold;
+            border: none; border-radius: 8px; cursor: pointer;
+            background: var(--secondary); color: #000; font-size: 1rem;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        .btn:disabled { background: #1a2c42; color: #444; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
 <div class="cyber-card">
-    <h2 style="color: var(--primary); letter-spacing: 2px; margin-bottom: 15px;">CYBER CORE V2</h2>
+    <h2 style="color: var(--primary); margin-bottom: 15px; font-size: 1.2rem;">SYSTEM SCANNER v3</h2>
+    
     <div id="map"></div>
-    <div class="rectangular-gauge">
-        <div style="font-size: 0.7rem; color: var(--primary);" id="statusTxt">SYSTEM READY</div>
-        <div class="speed-value" id="mainSpeed">0</div>
-        <div style="font-size: 0.8rem; color: var(--text-sec);">MBPS</div>
-        <div class="led-bar-container"><div id="ledFill" class="led-bar-fill"></div></div>
+
+    <div class="gauge">
+        <div id="status" style="font-size: 0.7rem; color: var(--primary); margin-bottom: 5px;">READY TO SCAN</div>
+        <div class="speed-value" id="speed">0</div>
+        <div style="font-size: 0.8rem; color: #8b9bb4;">MBPS</div>
+        <div class="led-bar" id="bar"></div>
     </div>
-    <div class="results-panel">
-        <div class="res-box"><div class="res-label">Ping</div><div id="pVal" style="color: var(--danger);">--</div></div>
-        <div class="res-box"><div class="res-label">Down</div><div id="dVal" style="color: var(--secondary);">--</div></div>
-        <div class="res-box"><div class="res-label">Up</div><div id="uVal" style="color: var(--primary);">--</div></div>
+
+    <div class="results">
+        <div class="res-box"><div>Ping</div><div id="ping" style="color:var(--danger)">--</div></div>
+        <div class="res-box"><div>Down</div><div id="down" style="color:var(--secondary)">--</div></div>
+        <div class="res-box"><div>Up</div><div id="up" style="color:var(--primary)">--</div></div>
     </div>
-    <button class="btn" id="startBtn" onclick="run15sTest()">INITIALIZE SCAN (15S)</button>
+
+    <button class="btn" id="btn" onclick="startScan()">Initialize 15s Scan</button>
 </div>
 
 <script>
-    // Khởi tạo bản đồ
-    const map = L.map('map', { attributionControl: false, zoomControl: false }).setView([10.7626, 106.6601], 13);
+    // 1. Khởi tạo bản đồ ngay lập tức
+    const map = L.map('map', { attributionControl: false, zoomControl: false }).setView([10.7626, 106.6601], 15);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
     if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(pos => {
-            const { latitude, longitude } = pos.coords;
-            map.setView([latitude, longitude], 15);
-            L.marker([latitude, longitude]).addTo(map);
-        });
+        navigator.geolocation.getCurrentPosition(p => {
+            const lat = p.coords.latitude;
+            const lng = p.coords.longitude;
+            map.setView([lat, lng], 16);
+            L.circle([lat, lng], { color: '#00f2fe', fillColor: '#00f2fe', fillOpacity: 0.5, radius: 50 }).addTo(map);
+        }, () => { console.log("Lỗi định vị"); });
     }
 
-    let isTesting = false;
+    // 2. Logic đo thật trong 15 giây
+    let scanning = false;
 
-    async function run15sTest() {
-        if (isTesting) return;
-        isTesting = true;
+    async function startScan() {
+        if (scanning) return;
+        scanning = true;
 
-        const btn = document.getElementById('startBtn');
-        const speedEl = document.getElementById('mainSpeed');
-        const ledFill = document.getElementById('ledFill');
-        const statusTxt = document.getElementById('statusTxt');
+        const btn = document.getElementById('btn');
+        const speedEl = document.getElementById('speed');
+        const bar = document.getElementById('bar');
+        const status = document.getElementById('status');
 
         btn.disabled = true;
-        btn.innerText = "SCANNING...";
+        btn.innerText = "SCANNING IN PROGRESS...";
 
-        // 1. Đo Ping
-        statusTxt.innerText = "LATENCY CHECK...";
+        // Đo Ping
+        status.innerText = "LATENCY CHECK...";
         const pStart = Date.now();
-        try { await fetch('https://www.google.com/generate_204', { mode: 'no-cors' }); } catch(e){}
-        document.getElementById('pVal').innerText = (Date.now() - pStart) + "ms";
-
-        // 2. Đo Download trong 15s
-        const duration = 15000; 
-        const startTime = Date.now();
-        let totalData = 0;
-
-        const updateUI = () => {
-            const now = Date.now();
-            const elapsed = (now - startTime) / 1000;
-            const remaining = Math.max(0, Math.ceil((duration - (now - startTime)) / 1000));
-            
-            if (elapsed > 0) {
-                const mbps = ((totalData * 8) / (elapsed * 1024 * 1024)).toFixed(1);
-                speedEl.innerText = Math.floor(mbps);
-                document.getElementById('dVal').innerText = mbps;
-                ledFill.style.width = Math.min((mbps / 100) * 100, 100) + "%";
-                statusTxt.innerText = `SCANNING... ${remaining}S`;
-            }
-
-            if (now - startTime < duration && isTesting) {
-                requestAnimationFrame(updateUI);
-            } else {
-                finishTest();
-            }
-        };
-
-        const fetchData = async () => {
-            while (Date.now() - startTime < duration && isTesting) {
-                try {
-                    const response = await fetch('https://cloudflare.com/cdn-cgi/trace?' + Date.now());
-                    const reader = response.body.getReader();
-                    while (true) {
-                        const {done, value} = await reader.read();
-                        if (done) break;
-                        totalData += value.length;
-                        if (Date.now() - startTime >= duration) break;
-                    }
-                } catch(e) { break; }
-            }
-        };
-
-        requestAnimationFrame(updateUI);
-        await fetchData();
-    }
-
-    function finishTest() {
-        isTesting = false;
-        document.getElementById('statusTxt').innerText = "SCAN COMPLETE";
+        try { await fetch('https://www.google.com/generate_204', { mode: 'no-cors' });
