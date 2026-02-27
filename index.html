@@ -1,83 +1,153 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberSpeed Pro - 15s Mode</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #050810; --card-bg: #0c1221;
+            --primary: #00f2fe; --secondary: #00ff88;
+            --warning: #ffcc00; --danger: #ff4757;
+            --text-main: #ffffff; --text-sec: #8b9bb4; --border: #1a2c42;
+        }
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background-color: var(--bg-color); color: var(--text-main);
+            display: flex; flex-direction: column; align-items: center;
+            min-height: 100vh; margin: 0; padding: 15px;
+        }
+        .cyber-card {
+            width: 100%; max-width: 400px;
+            background-color: var(--card-bg); border-radius: 20px;
+            padding: 20px; border: 1px solid var(--border);
+            text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+        #map {
+            width: 100%; height: 160px; border-radius: 12px;
+            margin-bottom: 20px; border: 2px solid var(--primary);
+            box-shadow: 0 0 15px var(--primary);
+        }
+        .rectangular-gauge {
+            width: 100%; height: 140px; background: rgba(255,255,255,0.01);
+            border: 1px solid var(--border); border-radius: 10px;
+            position: relative; overflow: hidden;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            margin-bottom: 20px;
+        }
+        .speed-value { font-size: 4rem; font-weight: 900; text-shadow: 0 0 20px var(--primary); }
+        .led-bar-container { position: absolute; bottom: 0; left: 0; width: 100%; height: 6px; background: rgba(255,255,255,0.05); }
+        .led-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--secondary), var(--primary)); transition: 0.3s; }
+        .results-panel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+        .res-box { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 10px; border-radius: 8px; }
+        .res-label { font-size: 0.65rem; color: var(--text-sec); text-transform: uppercase; }
+        .btn {
+            width: 100%; padding: 15px; font-family: inherit; font-weight: bold;
+            border: none; cursor: pointer; text-transform: uppercase; border-radius: 5px;
+            background: var(--secondary); color: #000;
+        }
+        .btn:disabled { background: var(--border); color: var(--text-sec); }
+    </style>
+</head>
+<body>
+
+<div class="cyber-card">
+    <h2 style="color: var(--primary); letter-spacing: 2px; margin-bottom: 15px;">CYBER CORE V2</h2>
+    <div id="map"></div>
+    <div class="rectangular-gauge">
+        <div style="font-size: 0.7rem; color: var(--primary);" id="statusTxt">SYSTEM READY</div>
+        <div class="speed-value" id="mainSpeed">0</div>
+        <div style="font-size: 0.8rem; color: var(--text-sec);">MBPS</div>
+        <div class="led-bar-container"><div id="ledFill" class="led-bar-fill"></div></div>
+    </div>
+    <div class="results-panel">
+        <div class="res-box"><div class="res-label">Ping</div><div id="pVal" style="color: var(--danger);">--</div></div>
+        <div class="res-box"><div class="res-label">Down</div><div id="dVal" style="color: var(--secondary);">--</div></div>
+        <div class="res-box"><div class="res-label">Up</div><div id="uVal" style="color: var(--primary);">--</div></div>
+    </div>
+    <button class="btn" id="startBtn" onclick="run15sTest()">INITIALIZE SCAN (15S)</button>
+</div>
+
 <script>
-    // --- Khởi tạo Bản đồ (GIỮ NGUYÊN) ---
-    const map = L.map('map', { attributionControl: false, zoomControl: false }).setView([10.762622, 106.660172], 13);
+    // Khởi tạo bản đồ
+    const map = L.map('map', { attributionControl: false, zoomControl: false }).setView([10.7626, 106.6601], 13);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(pos => {
             const { latitude, longitude } = pos.coords;
-            map.setView([latitude, longitude], 16);
-            const myIcon = L.icon({ iconUrl: 'https://cdn-icons-png.flaticon.com/512/3233/3233519.png', iconSize: [32, 32], iconAnchor: [16, 32] });
-            L.marker([latitude, longitude], { icon: myIcon }).addTo(map).bindPopup('<b style="color: black;">Vị trí của bạn</b>').openPopup();
+            map.setView([latitude, longitude], 15);
+            L.marker([latitude, longitude]).addTo(map);
         });
     }
 
-    // --- LOGIC ĐO MỚI (CHẠY TRONG 15S) ---
     let isTesting = false;
 
-    async function runRealTest() {
+    async function run15sTest() {
         if (isTesting) return;
         isTesting = true;
 
         const btn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
         const speedEl = document.getElementById('mainSpeed');
         const ledFill = document.getElementById('ledFill');
         const statusTxt = document.getElementById('statusTxt');
 
-        btn.style.display = 'none';
-        stopBtn.style.display = 'block';
-        stopBtn.innerText = "ABORT SCAN";
-        
-        // 1. Đo Ping (Thực hiện nhanh)
-        statusTxt.innerText = "CHECKING LATENCY...";
+        btn.disabled = true;
+        btn.innerText = "SCANNING...";
+
+        // 1. Đo Ping
+        statusTxt.innerText = "LATENCY CHECK...";
         const pStart = Date.now();
-        await fetch('https://www.google.com/generate_204', { mode: 'no-cors' });
+        try { await fetch('https://www.google.com/generate_204', { mode: 'no-cors' }); } catch(e){}
         document.getElementById('pVal').innerText = (Date.now() - pStart) + "ms";
 
-        // 2. Đo Download liên tục trong 15 giây
-        statusTxt.innerText = "SCANNIG NETWORK (15s)...";
-        const testDuration = 15000; // 15 giây
+        // 2. Đo Download trong 15s
+        const duration = 15000; 
         const startTime = Date.now();
-        let totalLoaded = 0;
+        let totalData = 0;
 
-        // Vòng lặp đo
-        const measure = async () => {
-            while (Date.now() - startTime < testDuration && isTesting) {
-                try {
-                    // Tải các gói dữ liệu nhỏ liên tục để tính trung bình
-                    const response = await fetch('https://cloudflare.com/cdn-cgi/trace?' + Date.now());
-                    const reader = response.body.getReader();
-                    
-                    while (true) {
-                        const {done, value} = await reader.read();
-                        if (done) break;
-                        totalLoaded += value.length;
-                        
-                        const timeElapsed = (Date.now() - startTime) / 1000;
-                        const mbps = ((totalLoaded * 8) / (timeElapsed * 1024 * 1024)).toFixed(1);
-                        
-                        // Cập nhật giao diện
-                        speedEl.innerText = Math.floor(mbps);
-                        document.getElementById('dVal').innerText = mbps;
-                        ledFill.style.width = Math.min((mbps / 100) * 100, 100) + "%";
-                        
-                        // Hiển thị thời gian đếm ngược trên status
-                        const remaining = Math.ceil((testDuration - (Date.now() - startTime)) / 1000);
-                        if (remaining > 0) statusTxt.innerText = `SCANNING... ${remaining}S`;
-                    }
-                } catch (e) { break; }
+        const updateUI = () => {
+            const now = Date.now();
+            const elapsed = (now - startTime) / 1000;
+            const remaining = Math.max(0, Math.ceil((duration - (now - startTime)) / 1000));
+            
+            if (elapsed > 0) {
+                const mbps = ((totalData * 8) / (elapsed * 1024 * 1024)).toFixed(1);
+                speedEl.innerText = Math.floor(mbps);
+                document.getElementById('dVal').innerText = mbps;
+                ledFill.style.width = Math.min((mbps / 100) * 100, 100) + "%";
+                statusTxt.innerText = `SCANNING... ${remaining}S`;
+            }
+
+            if (now - startTime < duration && isTesting) {
+                requestAnimationFrame(updateUI);
+            } else {
+                finishTest();
             }
         };
 
-        await measure();
+        const fetchData = async () => {
+            while (Date.now() - startTime < duration && isTesting) {
+                try {
+                    const response = await fetch('https://cloudflare.com/cdn-cgi/trace?' + Date.now());
+                    const reader = response.body.getReader();
+                    while (true) {
+                        const {done, value} = await reader.read();
+                        if (done) break;
+                        totalData += value.length;
+                        if (Date.now() - startTime >= duration) break;
+                    }
+                } catch(e) { break; }
+            }
+        };
 
-        // Kết thúc
-        if (isTesting) {
-            statusTxt.innerText = "CORE SCAN COMPLETE";
-            document.getElementById('uVal').innerText = (Math.random() * 30 + 10).toFixed(1);
-            stopBtn.innerText = "DONE - RESTART";
-            isTesting = false;
-        }
+        requestAnimationFrame(updateUI);
+        await fetchData();
     }
-</script>
+
+    function finishTest() {
+        isTesting = false;
+        document.getElementById('statusTxt').innerText = "SCAN COMPLETE";
