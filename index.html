@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberSpeed Pro - Control Mode</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-color: #050810;
+            --card-bg: #0c1221;
+            --primary: #00f2fe;   /* Neon Cyan */
+            --secondary: #00ff88; /* Neon Green */
+            --warning: #ffcc00;   /* Pause Yellow */
+            --danger: #ff4757;    /* Stop Red */
+            --text-main: #ffffff;
+            --text-sec: #8b9bb4;
+            --border: #1a2c42;
+        }
+
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex; height: 100vh; justify-content: center; align-items: center;
+        }
+
+        .cyber-card {
+            width: 380px;
+            background-color: var(--card-bg);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            border: 1px solid var(--border);
+            text-align: center;
+            position: relative;
+        }
+
+        /* --- Gauge Chữ Nhật --- */
+        .rectangular-gauge {
+            width: 100%; height: 160px;
+            margin-bottom: 25px;
+            background-color: rgba(255,255,255,0.01);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+
+        .status-indicator {
+            font-size: 0.7rem; color: var(--primary);
+            letter-spacing: 2px; margin-bottom: 5px; text-transform: uppercase;
+        }
+
+        .speed-value {
+            font-size: 5rem; font-weight: 900; line-height: 1;
+            text-shadow: 0 0 20px var(--primary);
+        }
+
+        /* --- Thanh Led Bar --- */
+        .led-bar-container {
+            position: absolute; bottom: 0; left: 0;
+            width: 100%; height: 6px; background: rgba(255,255,255,0.05);
+        }
+        .led-bar-fill {
+            height: 100%; width: 0%; 
+            background: linear-gradient(90deg, var(--secondary), var(--primary));
+            transition: 0.2s linear; box-shadow: 0 0 15px var(--primary);
+        }
+        .paused-led { animation: blink 0.8s infinite; background: var(--warning) !important; box-shadow: 0 0 15px var(--warning) !important; }
+
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+        /* --- Kết quả chi tiết --- */
+        .results-panel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 25px; }
+        .res-box { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 10px; border-radius: 8px; }
+        .res-label { font-size: 0.7rem; color: var(--text-sec); text-transform: uppercase; }
+        .res-val { font-size: 1.1rem; font-weight: bold; margin-top: 5px; }
+
+        /* --- Nút bấm điều khiển --- */
+        .controls { display: flex; gap: 10px; }
+        .btn {
+            font-family: 'Share Tech Mono', monospace;
+            font-weight: bold; border: none; cursor: pointer; text-transform: uppercase;
+            letter-spacing: 1px; transition: 0.2s; border-radius: 4px;
+        }
+        .btn-main { flex: 2; padding: 15px; background: var(--secondary); color: #000; clip-path: polygon(5% 0, 100% 0, 95% 100%, 0% 100%); }
+        .btn-pause { flex: 1; padding: 15px; background: var(--warning); color: #000; display: none; }
+        .btn-stop { flex: 1; padding: 15px; background: var(--danger); color: #fff; display: none; }
+        
+        .btn:hover { opacity: 0.8; transform: scale(1.02); }
+        .btn:active { transform: scale(0.98); }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="cyber-card">
+    <div class="rectangular-gauge">
+        <div class="status-indicator" id="statusTxt">System Ready</div>
+        <div class="speed-value" id="mainSpeed">0</div>
+        <div style="font-size: 0.8rem; color: var(--text-sec);">MBPS</div>
+        <div class="led-bar-container">
+            <div id="ledFill" class="led-bar-fill"></div>
+        </div>
+    </div>
+
+    <div class="results-panel">
+        <div class="res-box">
+            <div class="res-label">Ping</div>
+            <div class="res-val" id="pVal" style="color: var(--danger)">--</div>
+        </div>
+        <div class="res-box">
+            <div class="res-label">Down</div>
+            <div class="res-val" id="dVal" style="color: var(--secondary)">--</div>
+        </div>
+        <div class="res-box">
+            <div class="res-label">Up</div>
+            <div class="res-val" id="uVal" style="color: var(--primary)">--</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-main" id="startBtn" onclick="toggleStart()">Initialize</button>
+        <button class="btn btn-pause" id="pauseBtn" onclick="togglePause()">Pause</button>
+        <button class="btn btn-stop" id="stopBtn" onclick="stopTest()">Stop</button>
+    </div>
+</div>
+
+<script>
+    let isTesting = false;
+    let isPaused = false;
+    let speed = 0;
+    let testInterval;
+    let currentPhase = 'down';
+
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const statusTxt = document.getElementById('statusTxt');
+    const speedEl = document.getElementById('mainSpeed');
+    const ledFill = document.getElementById('ledFill');
+
+    function toggleStart() {
+        isTesting = true;
+        isPaused = false;
+        startBtn.style.display = 'none';
+        pauseBtn.style.display = 'block';
+        stopBtn.style.display = 'block';
+        statusTxt.innerText = "Scanning Download...";
+        document.getElementById('pVal').innerText = Math.floor(Math.random()*10+1);
+        runSpeedTest();
+    }
+
+    function togglePause() {
+        isPaused = !isPaused;
+        if (isPaused) {
+            statusTxt.innerText = "System Paused";
+            pauseBtn.innerText = "Resume";
+            ledFill.classList.add('paused-led');
+        } else {
+            statusTxt.innerText = "Scanning...";
+            pauseBtn.innerText = "Pause";
+            ledFill.classList.remove('paused-led');
+        }
+    }
+
+    function stopTest() {
+        clearInterval(testInterval);
+        isTesting = false;
+        statusTxt.innerText = "Scan Aborted";
+        startBtn.style.display = 'block';
+        startBtn.innerText = "Re-Initialize";
+        pauseBtn.style.display = 'none';
+        stopBtn.style.display = 'none';
+        ledFill.classList.remove('paused-led');
+        ledFill.style.width = '0%';
+        speedEl.innerText = "0";
+    }
+
+    function runSpeedTest() {
+        let target = 180 + Math.random()*50;
+        testInterval = setInterval(() => {
+            if (!isPaused && isTesting) {
+                speed += (target - speed) * 0.1;
+                speedEl.innerText = Math.floor(speed);
+                ledFill.style.width = (speed/250)*100 + "%";
+
+                if (speed >= target - 1) {
+                    clearInterval(testInterval);
+                    document.getElementById('dVal').innerText = target.toFixed(1);
+                    statusTxt.innerText = "Scan Complete";
+                    setTimeout(stopTest, 1500);
+                }
+            }
+        }, 50);
+    }
+</script>
+
+</body>
+</html>
