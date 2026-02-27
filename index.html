@@ -78,6 +78,10 @@
 </head>
 <body>
 
+<audio id="myAudio" loop preload="auto">
+    <source src="loilam.mp3" type="audio/mpeg">
+</audio>
+
 <div class="glass-panel">
     <h2>SPEEDTEST</h2>
 
@@ -116,10 +120,6 @@
 </div>
 
 <script>
-    // Gọi trực tiếp file nhạc trên GitHub của bạn
-    const bgMusic = new Audio('./loilam.mp3'); 
-    bgMusic.loop = true; 
-
     let isTesting = false;
     let phase = ''; 
     let activeXhrs = [];
@@ -199,22 +199,28 @@
     }
 
     async function startFullSequence() {
-        // Lệnh phát nhạc bọc lỗi để tránh trình duyệt làm sập web nếu mạng yếu
-        if (bgMusic.paused) {
-            bgMusic.play().catch(error => console.log("Trình duyệt đang đợi tương tác thêm để phát nhạc"));
-        }
+        const musicPlayer = document.getElementById('myAudio');
 
+        // NẾU ĐANG CHẠY MÀ ẤN "DỪNG LẠI"
         if (isTesting) {
             isTesting = false;
             activeXhrs.forEach(xhr => xhr.abort());
             activeXhrs = [];
             cancelAnimationFrame(uiFrame);
-            document.getElementById('status-txt').innerText = "Đã hủy";
+            
+            // Tắt nhạc khi ấn dừng
+            musicPlayer.pause();
+            musicPlayer.currentTime = 0; 
+
+            document.getElementById('status-txt').innerText = "Đã dừng";
             document.getElementById('btn').innerText = "Đo lại";
             return;
         }
 
+        // BẮT ĐẦU ĐO LÀ PHÁT NHẠC NGAY
         isTesting = true;
+        musicPlayer.play().catch(e => console.log("Lỗi phát nhạc, có thể do file loilam.mp3 chưa đúng tên hoặc chưa được tải lên"));
+
         resetUI();
         document.getElementById('btn').innerText = "Dừng lại";
         
@@ -227,7 +233,7 @@
         phase = 'dl';
         totalBytes = 0; 
         
-        // Sửa câu chữ ở đây theo ý bạn
+        // CHỮ TỐC ĐỘ MẠNG HIỆN TẠI
         document.getElementById('status-txt').innerText = "TỐC ĐỘ MẠNG HIỆN TẠI";
         
         document.getElementById('zone-dl').classList.add('active-zone');
@@ -239,6 +245,8 @@
         isTesting = false;
         document.getElementById('status-txt').innerText = "Hoàn tất";
         document.getElementById('btn').innerText = "Đo lại";
+        
+        // Nhạc vẫn sẽ tiếp tục phát cho đến khi bạn ấn Đo Lại hoặc load lại web
     }
 
     async function measurePing(duration) {
