@@ -3,194 +3,294 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Speedtest - Real World</title>
+    <title>Speedtest - Premium Design</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700;800&display=swap" rel="stylesheet">
+    
     <style>
-        body { background-color: #0f172a; color: #ffffff; font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .container { background: #1e293b; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.8); width: 320px; border: 1px solid #334155; }
-        h2 { margin-top: 0; color: #38bdf8; font-size: 1.4rem; letter-spacing: 1px; }
+        :root {
+            --text-main: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.7);
+            --glass-bg: rgba(20, 25, 40, 0.4); 
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --accent: #38bdf8; 
+        }
         
-        /* Box Tốc Độ */
-        .speed-box { margin: 20px 0; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 10px; border: 1px solid #334155; }
-        #speed-mbps { font-size: 4.5rem; font-weight: bold; line-height: 1; color: #22c55e; text-shadow: 0 0 15px rgba(34, 197, 94, 0.4); }
-        .unit-main { font-size: 1.2rem; color: #94a3b8; font-weight: bold; margin-bottom: 10px; display: block; }
+        body { 
+            background: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2670&auto=format&fit=crop') center/cover no-repeat;
+            background-attachment: fixed;
+            color: var(--text-main); 
+            font-family: 'Poppins', sans-serif; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            min-height: 100vh; margin: 0; padding: 15px; 
+            backdrop-filter: brightness(0.7); 
+        }
         
-        #speed-mbs { font-size: 1.5rem; color: #00f2fe; font-weight: bold; }
-        .unit-sub { font-size: 0.9rem; color: #94a3b8; }
-        
-        #status { font-size: 0.75rem; color: #cbd5e1; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; background: rgba(56, 189, 248, 0.1); padding: 5px; border-radius: 5px; }
-        
-        /* Lưới Ping & Jitter */
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
-        .stat-box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; border: 1px solid #334155; }
-        .stat-label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 5px; font-weight: bold; }
-        .stat-val { font-size: 1.6rem; font-weight: bold; }
-        #ping-val { color: #f43f5e; } 
-        #jitter-val { color: #f59e0b; } 
-        .ms { font-size: 0.8rem; color: #94a3b8; }
+        .glass-panel { 
+            background: var(--glass-bg); 
+            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            width: 100%; max-width: 380px; border-radius: 30px; padding: 30px 25px; 
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5), inset 0 2px 2px rgba(255,255,255,0.2); 
+            border: 1px solid var(--glass-border); 
+            position: relative; overflow: hidden; 
+        }
 
-        /* Nút Bấm */
-        button { border: none; padding: 18px; font-size: 1rem; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; text-transform: uppercase; transition: 0.2s; letter-spacing: 1px; }
-        .btn-start { background: #38bdf8; color: #0f172a; }
-        .btn-stop { background: #ff4757; color: #ffffff; }
-        button:active { transform: scale(0.97); }
+        h2 { text-align: center; margin: 0 0 25px 0; font-weight: 800; font-size: 1.6rem; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+
+        #map {
+            width: 100px; height: 100px;
+            border-radius: 20px;
+            position: absolute; top: 25px; right: 25px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            z-index: 10; background: #000;
+        }
+        .leaflet-control-attribution { display: none !important; }
+
+        .info-panel { margin-bottom: 25px; width: calc(100% - 130px); }
+        .info-row { display: flex; flex-direction: column; margin-bottom: 15px; }
+        .info-label { color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; font-weight: 500; margin-bottom: 2px; }
+        .info-val { font-weight: 700; font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .top-stats { display: flex; gap: 15px; margin-bottom: 25px; }
+        .mini-box { flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); padding: 15px; border-radius: 18px; text-align: center; }
+        .mini-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 500; letter-spacing: 1px; }
+        .mini-val { font-size: 1.5rem; font-weight: 800; margin-top: 5px; }
+        .unit { font-size: 0.9rem; font-weight: 500; color: var(--text-muted); }
+
+        .speed-zone { background: rgba(0, 0, 0, 0.2); border: 1px solid var(--glass-border); border-radius: 20px; padding: 35px 20px; margin-bottom: 25px; text-align: center; transition: 0.4s; }
+        .active-zone { background: rgba(255, 255, 255, 0.1); border-color: var(--accent); box-shadow: 0 0 30px rgba(56, 189, 248, 0.2); transform: scale(1.02); }
+        
+        .zone-title { font-size: 0.9rem; font-weight: 500; color: var(--text-muted); margin-bottom: 10px; letter-spacing: 2px; text-transform: uppercase; }
+        .speed-mbps { font-size: 5rem; font-weight: 800; line-height: 1; margin-bottom: 10px; transition: color 0.3s; }
+        .active-zone .speed-mbps { color: var(--accent); text-shadow: 0 0 20px rgba(56, 189, 248, 0.5); }
+        
+        .speed-mbs { font-size: 1.2rem; color: var(--text-muted); font-weight: 500; }
+
+        #status-txt { text-align: center; font-size: 0.85rem; font-weight: 500; color: var(--text-muted); margin-bottom: 20px; letter-spacing: 1px; height: 15px; text-transform: uppercase; transition: 0.3s; }
+        
+        button { background: rgba(255, 255, 255, 0.1); color: var(--text-main); border: 1px solid var(--glass-border); padding: 18px; font-size: 1.1rem; font-weight: 700; font-family: 'Poppins', sans-serif; border-radius: 16px; cursor: pointer; width: 100%; text-transform: uppercase; transition: all 0.3s ease; letter-spacing: 2px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); backdrop-filter: blur(10px); }
+        button:hover { background: var(--text-main); color: #000; box-shadow: 0 15px 25px rgba(0,0,0,0.3); transform: translateY(-3px); }
+        button:active { transform: translateY(1px); }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>REAL-WORLD SPEED</h2>
-    <div id="status">SẴN SÀNG</div>
-    
-    <div class="speed-box">
-        <span class="unit-main">TỐC ĐỘ MẠNG</span>
-        <div id="speed-mbps">0</div>
-        <span class="unit-main">Mbps</span>
-        
-        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #334155;">
-            <span style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase;">Tốc độ tải file thực tế:</span><br>
-            <span id="speed-mbs">0.00</span> <span class="unit-sub">MB/s</span>
+<div class="glass-panel">
+    <h2>SPEEDTEST</h2>
+
+    <div id="map"></div>
+
+    <div class="info-panel">
+        <div class="info-row">
+            <span class="info-label">Vị trí</span>
+            <span class="info-val" id="loc-val">Đang định vị...</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Nhà mạng</span>
+            <span class="info-val" id="isp-val">Đang quét...</span>
         </div>
     </div>
 
-    <div class="stats-grid">
-        <div class="stat-box">
-            <div class="stat-label">Ping</div>
-            <div class="stat-val"><span id="ping-val">--</span> <span class="ms">ms</span></div>
+    <div class="top-stats">
+        <div class="mini-box">
+            <div class="mini-label">Ping</div>
+            <div class="mini-val"><span id="ping-val">--</span><span class="unit"> ms</span></div>
         </div>
-        <div class="stat-box">
-            <div class="stat-label">Jitter</div>
-            <div class="stat-val"><span id="jitter-val">--</span> <span class="ms">ms</span></div>
+        <div class="mini-box">
+            <div class="mini-label">Jitter</div>
+            <div class="mini-val"><span id="jitter-val">--</span><span class="unit"> ms</span></div>
         </div>
     </div>
 
-    <button id="btn" class="btn-start" onclick="toggleTest()">BẮT ĐẦU ĐO (1 LUỒNG)</button>
+    <div class="speed-zone" id="zone-dl">
+        <div class="zone-title">Download</div>
+        <div class="speed-mbps" id="dl-mbps">0</div>
+        <div class="speed-mbs"><span id="dl-mbs">0.00</span> <span class="unit">MB/s</span></div>
+    </div>
+
+    <div id="status-txt">Sẵn sàng</div>
+    <button id="btn" onclick="startFullSequence()">Bắt đầu đo</button>
 </div>
 
 <script>
+    // Gọi trực tiếp file nhạc trên GitHub của bạn
+    const bgMusic = new Audio('./loilam.mp3'); 
+    bgMusic.loop = true; 
+
     let isTesting = false;
-    let xhr = null;
+    let phase = ''; 
+    let activeXhrs = [];
     let totalBytes = 0;
-    let lastTotalBytes = 0;
+    let lastBytes = 0;
     let lastTime = 0;
-    let speedHistory = []; 
+    let speedHistory = [];
+    let uiFrame;
+    let map, userMarker;
 
-    let lastPing = null;
-    let jitterTotal = 0;
-    let jitterCount = 0;
+    window.onload = function() {
+        map = L.map('map', { zoomControl: false, attributionControl: false }).setView([16.0, 108.0], 5);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-    function toggleTest() {
-        const btn = document.getElementById('btn');
-        const statusEl = document.getElementById('status');
+        fetch('https://get.geojs.io/v1/ip/geo.json')
+            .then(res => res.json())
+            .then(data => {
+                let city = data.city || "Unknown";
+                let country = data.country || "";
+                document.getElementById('loc-val').innerText = `${city}${country ? ', ' + country : ''}`;
+                document.getElementById('isp-val').innerText = data.organization_name || data.organization || "Unknown";
+
+                if (data.latitude && data.longitude) {
+                    let lat = parseFloat(data.latitude);
+                    let lon = parseFloat(data.longitude);
+                    map.setView([lat, lon], 12);
+                    if (userMarker) map.removeLayer(userMarker);
+                    userMarker = L.circleMarker([lat, lon], {
+                        radius: 8, fillColor: "#38bdf8", color: "#fff", weight: 2, opacity: 1, fillOpacity: 0.9
+                    }).addTo(map);
+                }
+            })
+            .catch(e => {
+                document.getElementById('loc-val').innerText = "Ẩn danh";
+                document.getElementById('isp-val').innerText = "Không xác định";
+            });
+    };
+
+    function resetUI() {
+        document.getElementById('dl-mbps').innerText = "0"; 
+        document.getElementById('dl-mbs').innerText = "0.00";
+        document.getElementById('ping-val').innerText = "--"; 
+        document.getElementById('jitter-val').innerText = "--";
+        document.getElementById('zone-dl').classList.remove('active-zone');
+        document.getElementById('status-txt').style.color = "var(--text-muted)";
+    }
+
+    function startUI() {
+        lastTime = Date.now();
+        lastBytes = totalBytes;
+        speedHistory = [];
+        
+        const loop = () => {
+            if (!isTesting || phase === 'ping') return;
+            let now = Date.now();
+            let deltaT = (now - lastTime) / 1000;
+            if (deltaT >= 0.25) {
+                let deltaBytes = totalBytes - lastBytes;
+                let currentMBs = deltaBytes / (deltaT * 1024 * 1024);
+                let currentMbps = currentMBs * 8;
+                
+                speedHistory.push({ mbps: currentMbps, mbs: currentMBs });
+                if (speedHistory.length > 5) speedHistory.shift();
+                
+                let avgMbps = speedHistory.reduce((a, b) => a + b.mbps, 0) / speedHistory.length;
+                let avgMBs = speedHistory.reduce((a, b) => a + b.mbs, 0) / speedHistory.length;
+                
+                document.getElementById('dl-mbps').innerText = Math.max(0, avgMbps).toFixed(0);
+                document.getElementById('dl-mbs').innerText = Math.max(0, avgMBs).toFixed(2);
+                
+                lastBytes = totalBytes;
+                lastTime = now;
+            }
+            uiFrame = requestAnimationFrame(loop);
+        };
+        uiFrame = requestAnimationFrame(loop);
+    }
+
+    async function startFullSequence() {
+        // Lệnh phát nhạc bọc lỗi để tránh trình duyệt làm sập web nếu mạng yếu
+        if (bgMusic.paused) {
+            bgMusic.play().catch(error => console.log("Trình duyệt đang đợi tương tác thêm để phát nhạc"));
+        }
 
         if (isTesting) {
-            // DỪNG ĐO
             isTesting = false;
-            if (xhr) xhr.abort();
-            
-            btn.className = "btn-start";
-            btn.innerText = "BẮT ĐẦU ĐO (1 LUỒNG)";
-            statusEl.innerText = "Đã ngắt kết nối";
-            document.getElementById('speed-mbps').style.color = "#94a3b8";
-            document.getElementById('speed-mbs').style.color = "#94a3b8";
+            activeXhrs.forEach(xhr => xhr.abort());
+            activeXhrs = [];
+            cancelAnimationFrame(uiFrame);
+            document.getElementById('status-txt').innerText = "Đã hủy";
+            document.getElementById('btn').innerText = "Đo lại";
             return;
         }
 
-        // BẮT ĐẦU ĐO
         isTesting = true;
-        totalBytes = 0; lastTotalBytes = 0; speedHistory = [];
-        lastPing = null; jitterTotal = 0; jitterCount = 0;
-
-        btn.className = "btn-stop";
-        btn.innerText = "DỪNG ĐO";
-        document.getElementById('speed-mbps').style.color = "#22c55e";
-        document.getElementById('speed-mbs').style.color = "#00f2fe";
-        document.getElementById('speed-mbps').innerText = "0";
-        document.getElementById('speed-mbs').innerText = "0.00";
-        document.getElementById('ping-val').innerText = "--";
-        document.getElementById('jitter-val').innerText = "--";
-        statusEl.innerText = "ĐANG ĐO TỐC ĐỘ THỰC TẾ...";
-
-        lastTime = Date.now();
-        startSingleThread();
-        requestAnimationFrame(updateUI);
-        runPingLoop();
-    }
-
-    // Mở đúng 1 luồng kết nối (Mô phỏng tải 1 file thực tế)
-    function startSingleThread() {
+        resetUI();
+        document.getElementById('btn').innerText = "Dừng lại";
+        
+        phase = 'ping';
+        document.getElementById('status-txt').innerText = "Đang kiểm tra độ trễ...";
+        document.getElementById('status-txt').style.color = "var(--accent)";
+        await measurePing(3000);
         if (!isTesting) return;
-        xhr = new XMLHttpRequest();
+
+        phase = 'dl';
+        totalBytes = 0; 
         
-        // Tải file 50MB
-        const testUrl = "https://speed.cloudflare.com/__down?bytes=50000000&r=" + Math.random();
-        xhr.open('GET', testUrl, true);
+        // Sửa câu chữ ở đây theo ý bạn
+        document.getElementById('status-txt').innerText = "TỐC ĐỘ MẠNG HIỆN TẠI";
         
-        let lastLoaded = 0;
-        xhr.onprogress = function(event) {
-            if (!isTesting) return;
-            const chunk = event.loaded - lastLoaded;
-            totalBytes += chunk; 
-            lastLoaded = event.loaded;
-        };
-        
-        // Tải xong tự động nối tiếp
-        xhr.onload = function() { if (isTesting) startSingleThread(); };
-        xhr.onerror = function() { if (isTesting) setTimeout(startSingleThread, 1000); };
-        xhr.send();
+        document.getElementById('zone-dl').classList.add('active-zone');
+        startUI();
+        await measureBandwidth(15000);
+        cancelAnimationFrame(uiFrame);
+        document.getElementById('zone-dl').classList.remove('active-zone');
+
+        isTesting = false;
+        document.getElementById('status-txt').innerText = "Hoàn tất";
+        document.getElementById('btn').innerText = "Đo lại";
     }
 
-    // Tính toán hiển thị
-    function updateUI() {
-        if (!isTesting) return;
-        const now = Date.now();
-        const deltaT = (now - lastTime) / 1000;
-
-        // Cập nhật mỗi 0.25 giây
-        if (deltaT >= 0.25) {
-            const deltaBytes = totalBytes - lastTotalBytes;
-            
-            // Tính Megabyte/giây (MB/s) - Tốc độ hiển thị khi tải file
-            const currentMBs = (deltaBytes / (deltaT * 1024 * 1024));
-            
-            // Tính Megabit/giây (Mbps) - Tốc độ chuẩn nhà mạng
-            const currentMbps = currentMBs * 8;
-            
-            // Làm mượt số liệu
-            speedHistory.push({ mbps: currentMbps, mbs: currentMBs });
-            if (speedHistory.length > 4) speedHistory.shift();
-            
-            const avgMbps = speedHistory.reduce((a, b) => a + b.mbps, 0) / speedHistory.length;
-            const avgMBs = speedHistory.reduce((a, b) => a + b.mbs, 0) / speedHistory.length;
-            
-            // Hiển thị ra màn hình
-            document.getElementById('speed-mbps').innerText = avgMbps.toFixed(0);
-            document.getElementById('speed-mbs').innerText = avgMBs.toFixed(2);
-            
-            lastTotalBytes = totalBytes;
-            lastTime = now;
-        }
-        requestAnimationFrame(updateUI);
-    }
-
-    // Luồng đo Ping & Jitter
-    async function runPingLoop() {
-        while (isTesting) {
-            const pStart = Date.now();
+    async function measurePing(duration) {
+        let startTime = Date.now();
+        let pings = [];
+        while (Date.now() - startTime < duration && isTesting) {
+            let pStart = Date.now();
             try {
                 await fetch('https://cloudflare.com/cdn-cgi/trace?r=' + Math.random(), { cache: 'no-store' });
-                const ping = Date.now() - pStart;
+                let ping = Date.now() - pStart;
+                pings.push(ping);
                 document.getElementById('ping-val').innerText = ping;
-
-                if (lastPing !== null) {
-                    const jitter = Math.abs(ping - lastPing);
-                    jitterTotal += jitter;
-                    jitterCount++;
-                    document.getElementById('jitter-val').innerText = (jitterTotal / jitterCount).toFixed(0);
+                if (pings.length > 1) {
+                    let jitter = Math.abs(pings[pings.length - 1] - pings[pings.length - 2]);
+                    document.getElementById('jitter-val').innerText = jitter;
                 }
-                lastPing = ping;
             } catch (e) {}
-            await new Promise(r => setTimeout(r, 1000)); // Đo ping mỗi 1 giây
+            await new Promise(r => setTimeout(r, 400));
         }
+    }
+
+    function measureBandwidth(duration) {
+        return new Promise((resolve) => {
+            let startTime = Date.now();
+            let activeThreads = 0;
+            let maxThreads = 4;
+
+            function nextChunk() {
+                if (!isTesting || Date.now() - startTime >= duration) {
+                    if (activeThreads === 0) resolve();
+                    return;
+                }
+                activeThreads++;
+                let xhr = new XMLHttpRequest();
+                activeXhrs.push(xhr);
+                xhr.open('GET', "https://speed.cloudflare.com/__down?bytes=25000000&r=" + Math.random(), true);
+                let chunkLoaded = 0;
+                xhr.onprogress = (e) => {
+                    if (!isTesting) return;
+                    totalBytes += (e.loaded - chunkLoaded);
+                    chunkLoaded = e.loaded;
+                };
+                xhr.send();
+                xhr.onload = xhr.onerror = xhr.onabort = () => { 
+                    activeThreads--;
+                    let idx = activeXhrs.indexOf(xhr);
+                    if(idx > -1) activeXhrs.splice(idx, 1);
+                    nextChunk(); 
+                };
+            }
+            for(let i = 0; i < maxThreads; i++) nextChunk();
+        });
     }
 </script>
 </body>
