@@ -3,108 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Speedtest - Premium Design</title>
+    <title>Speedtest - Ultimate Edition</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;700;800&display=swap" rel="stylesheet">
     
     <style>
+        /* --- CÁC BIẾN MẶC ĐỊNH (GIAO DIỆN DARK GLASS) --- */
         :root {
             --text-main: #ffffff;
             --text-muted: rgba(255, 255, 255, 0.7);
             --glass-bg: rgba(20, 25, 40, 0.4); 
             --glass-border: rgba(255, 255, 255, 0.15);
-            --accent: #38bdf8; 
+            --accent: #38bdf8;
+            --bg-body: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2670&auto=format&fit=crop') center/cover no-repeat fixed;
+            --panel-shadow: 0 30px 60px rgba(0,0,0,0.5), inset 0 2px 2px rgba(255,255,255,0.2);
+            --box-bg: rgba(255, 255, 255, 0.05);
+            --box-bg-info: rgba(0, 0, 0, 0.2);
+            --btn-bg: rgba(255, 255, 255, 0.1);
+            --btn-hover: var(--text-main);
+            --btn-hover-text: #000;
+            --map-border: var(--glass-border);
+            --active-glow: 0 0 30px rgba(56, 189, 248, 0.2);
         }
-        
+
+        /* --- GIAO DIỆN SÁNG TỐI GIẢN (LIGHT MINIMALIST) --- */
+        body.light-theme {
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --glass-bg: #ffffff;
+            --glass-border: #e2e8f0;
+            --accent: #0ea5e9;
+            --bg-body: #f1f5f9; /* Màu xám sáng phẳng, không dùng ảnh nền */
+            --panel-shadow: 0 20px 40px rgba(0,0,0,0.08);
+            --box-bg: #f8fafc;
+            --box-bg-info: #f8fafc;
+            --btn-bg: #0ea5e9;
+            --btn-hover: #0284c7;
+            --btn-hover-text: #fff;
+            --map-border: #cbd5e1;
+            --active-glow: 0 10px 25px rgba(14, 165, 233, 0.2);
+        }
+
         body { 
-            background: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2670&auto=format&fit=crop') center/cover no-repeat;
-            background-attachment: fixed;
+            background: var(--bg-body);
             color: var(--text-main); 
             font-family: 'Poppins', sans-serif; 
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
             min-height: 100vh; margin: 0; padding: 15px; 
-            backdrop-filter: brightness(0.7); 
-            overflow: hidden; /* Tránh tạo thanh cuộn khi hiệu ứng click tràn viền */
+            transition: background 0.5s ease, color 0.5s ease;
         }
         
+        /* Hiệu ứng kính mờ (Tự động tắt đi nếu ở Light Theme) */
         .glass-panel { 
             background: var(--glass-bg); 
             backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
             width: 100%; max-width: 380px; border-radius: 30px; padding: 30px 25px; 
-            box-shadow: 0 30px 60px rgba(0,0,0,0.5), inset 0 2px 2px rgba(255,255,255,0.2); 
+            box-shadow: var(--panel-shadow); 
             border: 1px solid var(--glass-border); 
             position: relative; overflow: hidden; 
-            z-index: 2;
+            transition: all 0.5s ease;
         }
+        
+        body.light-theme .glass-panel { backdrop-filter: none; -webkit-backdrop-filter: none; }
 
-        h2 { text-align: center; margin: 0 0 25px 0; font-weight: 800; font-size: 1.6rem; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        h2 { text-align: center; margin: 0 0 25px 0; font-weight: 800; font-size: 1.6rem; letter-spacing: 2px; text-transform: uppercase; }
 
         .header-row { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 25px; }
 
-        .info-panel { flex: 1; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--glass-border); border-radius: 20px; padding: 15px; }
+        .info-panel { flex: 1; background: var(--box-bg-info); border: 1px solid var(--glass-border); border-radius: 20px; padding: 15px; transition: 0.5s; }
         .info-row { display: flex; flex-direction: column; margin-bottom: 12px; }
         .info-row:last-child { margin-bottom: 0; }
-        .info-label { color: var(--text-muted); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1px; font-weight: 500; margin-bottom: 2px; }
+        .info-label { color: var(--text-muted); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1px; font-weight: 600; margin-bottom: 2px; transition: 0.5s; }
         .info-val { font-weight: 700; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         #map {
             width: 90px; height: 90px;
-            border-radius: 20px;
-            border: 2px solid var(--glass-border);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-            z-index: 10; background: #e5e5e5;
-            flex-shrink: 0; 
+            border-radius: 20px; border: 2px solid var(--map-border);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1); z-index: 10; flex-shrink: 0; background: #e5e5e5; transition: 0.5s;
         }
         .leaflet-control-attribution { display: none !important; }
 
-        /* HIỆU ỨNG RADAR CHO MARKER BẢN ĐỒ */
-        .custom-radar-icon { position: relative; }
-        .radar-core { width: 14px; height: 14px; background: var(--accent); border-radius: 50%; position: absolute; top: -7px; left: -7px; box-shadow: 0 0 15px var(--accent); z-index: 2; border: 2px solid #fff; }
-        .radar-pulse { width: 40px; height: 40px; background: rgba(56, 189, 248, 0.5); border-radius: 50%; position: absolute; top: -20px; left: -20px; z-index: 1; animation: radar-anim 1.5s infinite ease-out; }
-        @keyframes radar-anim { 0% { transform: scale(0.3); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
-
         .top-stats { display: flex; gap: 15px; margin-bottom: 25px; }
-        .mini-box { flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); padding: 15px; border-radius: 18px; text-align: center; }
-        .mini-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 500; letter-spacing: 1px; }
+        .mini-box { flex: 1; background: var(--box-bg); border: 1px solid var(--glass-border); padding: 15px; border-radius: 18px; text-align: center; transition: 0.5s; }
+        .mini-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 1px; transition: 0.5s; }
         .mini-val { font-size: 1.5rem; font-weight: 800; margin-top: 5px; }
-        .unit { font-size: 0.9rem; font-weight: 500; color: var(--text-muted); }
+        .unit { font-size: 0.9rem; font-weight: 500; color: var(--text-muted); transition: 0.5s; }
 
-        .speed-zone { background: rgba(0, 0, 0, 0.2); border: 1px solid var(--glass-border); border-radius: 20px; padding: 30px 20px; margin-bottom: 25px; text-align: center; transition: 0.4s; }
-        .active-zone { background: rgba(255, 255, 255, 0.1); border-color: var(--accent); box-shadow: 0 0 30px rgba(56, 189, 248, 0.2); transform: scale(1.02); }
+        .speed-zone { background: var(--box-bg-info); border: 1px solid var(--glass-border); border-radius: 20px; padding: 30px 20px; margin-bottom: 25px; text-align: center; transition: 0.4s; }
+        .active-zone { border-color: var(--accent); box-shadow: var(--active-glow); transform: scale(1.02); }
         
-        .zone-title { font-size: 0.9rem; font-weight: 500; color: var(--text-muted); margin-bottom: 5px; letter-spacing: 2px; text-transform: uppercase; }
+        .zone-title { font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; letter-spacing: 2px; text-transform: uppercase; transition: 0.5s; }
         
         .speed-display { display: flex; justify-content: center; align-items: baseline; gap: 8px; margin-bottom: 5px; }
         .speed-mbps { font-size: 5rem; font-weight: 800; line-height: 1; transition: color 0.3s; }
         .speed-unit { font-size: 1.5rem; font-weight: 700; color: var(--text-muted); transition: color 0.3s; }
         
-        .active-zone .speed-mbps, .active-zone .speed-unit { color: var(--accent); text-shadow: 0 0 20px rgba(56, 189, 248, 0.5); }
+        .active-zone .speed-mbps, .active-zone .speed-unit { color: var(--accent); }
         
-        .speed-mbs { font-size: 1.1rem; color: var(--text-muted); font-weight: 500; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: 5px; }
+        .speed-mbs { font-size: 1.1rem; color: var(--text-muted); font-weight: 500; border-top: 1px solid var(--glass-border); padding-top: 10px; margin-top: 5px; transition: 0.5s; }
 
-        #status-txt { text-align: center; font-size: 0.85rem; font-weight: 500; color: var(--text-muted); margin-bottom: 20px; letter-spacing: 1px; height: 15px; text-transform: uppercase; transition: 0.3s; }
+        #status-txt { text-align: center; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 20px; letter-spacing: 1px; height: 15px; text-transform: uppercase; transition: 0.3s; }
         
-        button { background: rgba(255, 255, 255, 0.1); color: var(--text-main); border: 1px solid var(--glass-border); padding: 18px; font-size: 1.1rem; font-weight: 700; font-family: 'Poppins', sans-serif; border-radius: 16px; cursor: pointer; width: 100%; text-transform: uppercase; transition: all 0.3s ease; letter-spacing: 2px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); backdrop-filter: blur(10px); position: relative; z-index: 10; }
-        button:hover { background: var(--text-main); color: #000; box-shadow: 0 15px 25px rgba(0,0,0,0.3); transform: translateY(-3px); }
-        button:active { transform: translateY(1px); }
+        button.main-btn { background: var(--btn-bg); color: var(--text-main); border: 1px solid var(--glass-border); padding: 18px; font-size: 1.1rem; font-weight: 700; font-family: 'Poppins', sans-serif; border-radius: 16px; cursor: pointer; width: 100%; text-transform: uppercase; transition: all 0.3s ease; letter-spacing: 2px; }
+        body.light-theme button.main-btn { color: #fff; }
+        button.main-btn:hover { background: var(--btn-hover); color: var(--btn-hover-text); transform: translateY(-3px); }
 
-        /* HIỆU ỨNG SÓNG ÂM KHI CLICK MÀN HÌNH */
-        .click-ripple {
-            position: fixed;
-            border-radius: 50%;
-            border: 2px solid var(--accent);
-            transform: translate(-50%, -50%);
-            animation: ripple-effect 0.6s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
-            pointer-events: none; /* Không cản trở các thao tác khác */
-            z-index: 9999;
-            box-shadow: 0 0 15px var(--accent), inset 0 0 15px var(--accent);
-        }
-        @keyframes ripple-effect {
-            0% { width: 0px; height: 0px; opacity: 1; border-width: 4px; }
-            100% { width: 120px; height: 120px; opacity: 0; border-width: 0px; }
-        }
+        /* --- NÚT SETTING (Cài đặt) --- */
+        .settings-btn { position: fixed; top: 20px; right: 20px; font-size: 1.8rem; cursor: pointer; opacity: 0.3; transition: 0.3s; z-index: 100; color: var(--text-main); }
+        .settings-btn:hover { opacity: 1; transform: rotate(90deg); }
+
+        /* --- MENU CÀI ĐẶT --- */
+        .settings-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: 0.3s; }
+        .settings-modal.show { opacity: 1; pointer-events: auto; }
+        .settings-content { background: var(--glass-bg); padding: 30px; border-radius: 20px; border: 1px solid var(--glass-border); width: 85%; max-width: 350px; }
+        body.light-theme .settings-content { background: #fff; color: #0f172a; }
+        
+        .settings-content h3 { margin-top: 0; text-align: center; letter-spacing: 1px; }
+        .set-group { margin-bottom: 20px; }
+        .set-group label { display: block; font-size: 0.85rem; margin-bottom: 8px; font-weight: 600; opacity: 0.8; }
+        .set-group select { width: 100%; padding: 12px; border-radius: 10px; background: rgba(0,0,0,0.2); color: inherit; border: 1px solid var(--glass-border); font-family: inherit; font-size: 1rem; cursor: pointer; }
+        body.light-theme .set-group select { background: #f8fafc; color: #0f172a; }
+        .set-group select option { background: #1e293b; color: #fff; }
+        body.light-theme .set-group select option { background: #fff; color: #000; }
+        
+        .close-set { background: var(--accent); color: #fff; border: none; padding: 12px; width: 100%; border-radius: 10px; cursor: pointer; font-weight: bold; font-family: inherit; margin-top: 10px; }
+        
+        /* Hiệu ứng sóng click */
+        .click-ripple { position: fixed; border-radius: 50%; border: 2px solid var(--accent); transform: translate(-50%, -50%); animation: ripple-effect 0.6s cubic-bezier(0.1, 0.8, 0.3, 1) forwards; pointer-events: none; z-index: 9999; box-shadow: 0 0 15px var(--accent); }
+        @keyframes ripple-effect { 0% { width: 0px; height: 0px; opacity: 1; border-width: 4px; } 100% { width: 120px; height: 120px; opacity: 0; border-width: 0px; } }
     </style>
 </head>
 <body>
@@ -113,18 +140,55 @@
     <source src="loilam.mp3" type="audio/mpeg">
 </audio>
 
+<div class="settings-btn" onclick="toggleSettings()">⚙️</div>
+
+<div class="settings-modal" id="set-modal">
+    <div class="settings-content">
+        <h3 id="set-title">CÀI ĐẶT TÙY CHỈNH</h3>
+        
+        <div class="set-group">
+            <label id="lbl-duration">Thời gian đo:</label>
+            <select id="sel-duration">
+                <option value="15">Mặc định (15 giây)</option>
+                <option value="60">1 Phút</option>
+                <option value="300">5 Phút</option>
+                <option value="900">15 Phút</option>
+                <option value="1800">30 Phút</option>
+            </select>
+        </div>
+
+        <div class="set-group">
+            <label id="lbl-theme">Giao diện:</label>
+            <select id="sel-theme" onchange="applyTheme()">
+                <option value="dark">Đêm Sang Trọng (Kính mờ)</option>
+                <option value="light">Sáng Tối Giản (Minimal)</option>
+            </select>
+        </div>
+
+        <div class="set-group">
+            <label id="lbl-lang">Ngôn ngữ / Language:</label>
+            <select id="sel-lang" onchange="applyLanguage()">
+                <option value="vi">Tiếng Việt</option>
+                <option value="en">English</option>
+            </select>
+        </div>
+
+        <button class="close-set" onclick="toggleSettings()" id="btn-close-set">Lưu & Đóng</button>
+    </div>
+</div>
+
 <div class="glass-panel">
-    <h2>SPEEDTEST</h2>
+    <h2 id="app-title">SPEEDTEST</h2>
 
     <div class="header-row">
         <div class="info-panel">
             <div class="info-row">
-                <span class="info-label">Vị trí</span>
-                <span class="info-val" id="loc-val">Cấp quyền GPS...</span>
+                <span class="info-label" id="lbl-loc">Vị trí</span>
+                <span class="info-val" id="loc-val">...</span>
             </div>
             <div class="info-row">
-                <span class="info-label">Nhà mạng</span>
-                <span class="info-val" id="isp-val">Đang quét...</span>
+                <span class="info-label" id="lbl-isp">Nhà mạng</span>
+                <span class="info-val" id="isp-val">...</span>
             </div>
         </div>
         <div id="map"></div>
@@ -142,7 +206,7 @@
     </div>
 
     <div class="speed-zone" id="zone-dl">
-        <div class="zone-title">Download</div>
+        <div class="zone-title" id="lbl-dl">Download</div>
         
         <div class="speed-display">
             <div class="speed-mbps" id="dl-mbps">0</div>
@@ -153,130 +217,158 @@
     </div>
 
     <div id="status-txt">Sẵn sàng</div>
-    <button id="btn" onclick="startFullSequence()">Bắt đầu đo</button>
+    <button class="main-btn" id="btn" onclick="startFullSequence()">Bắt đầu đo</button>
 </div>
 
 <script>
-    // BẮT SỰ KIỆN TẠO SÓNG ÂM NEON KHI CHẠM MÀN HÌNH
+    // --- HỆ THỐNG ĐA NGÔN NGỮ ---
+    const i18n = {
+        vi: {
+            appTitle: "SPEEDTEST", loc: "Vị trí", isp: "Nhà mạng", dl: "Download",
+            ready: "Sẵn sàng", pinging: "Đang kiểm tra độ trễ...", testing: "TỐC ĐỘ MẠNG HIỆN TẠI",
+            done: "Hoàn tất", stopped: "Đã dừng", startBtn: "Bắt đầu đo", stopBtn: "Dừng lại", retryBtn: "Đo lại",
+            locDef: "Cấp quyền GPS...", ispDef: "Đang quét...",
+            setTitle: "CÀI ĐẶT TÙY CHỈNH", lblDur: "Thời gian đo:", lblTheme: "Giao diện:", lblLang: "Ngôn ngữ / Language:",
+            btnCloseSet: "Lưu & Đóng",
+            dur15s: "Mặc định (15 giây)", dur1m: "1 Phút", dur5m: "5 Phút", dur15m: "15 Phút", dur30m: "30 Phút",
+            themeDark: "Đêm Sang Trọng (Kính mờ)", themeLight: "Sáng Tối Giản (Minimal)"
+        },
+        en: {
+            appTitle: "SPEEDTEST", loc: "Location", isp: "Provider", dl: "Download",
+            ready: "Ready", pinging: "Measuring latency...", testing: "CURRENT NETWORK SPEED",
+            done: "Complete", stopped: "Stopped", startBtn: "Start Test", stopBtn: "Stop", retryBtn: "Test Again",
+            locDef: "Allow GPS...", ispDef: "Scanning...",
+            setTitle: "SETTINGS", lblDur: "Test Duration:", lblTheme: "Theme:", lblLang: "Language:",
+            btnCloseSet: "Save & Close",
+            dur15s: "Default (15s)", dur1m: "1 Minute", dur5m: "5 Minutes", dur15m: "15 Minutes", dur30m: "30 Minutes",
+            themeDark: "Dark Glass (Night)", themeLight: "Minimalist (Light)"
+        }
+    };
+    let currentLang = 'vi';
+
+    function applyLanguage() {
+        currentLang = document.getElementById('sel-lang').value;
+        const t = i18n[currentLang];
+        
+        document.getElementById('app-title').innerText = t.appTitle;
+        document.getElementById('lbl-loc').innerText = t.loc;
+        document.getElementById('lbl-isp').innerText = t.isp;
+        document.getElementById('lbl-dl').innerText = t.dl;
+        if(!isTesting) document.getElementById('status-txt').innerText = t.ready;
+        if(!isTesting) document.getElementById('btn').innerText = document.getElementById('btn').innerText.includes("Đo") || document.getElementById('btn').innerText.includes("Test") ? t.startBtn : t.retryBtn;
+        
+        if(document.getElementById('loc-val').innerText.includes("Cấp") || document.getElementById('loc-val').innerText.includes("Allow")) document.getElementById('loc-val').innerText = t.locDef;
+        if(document.getElementById('isp-val').innerText.includes("Đang") || document.getElementById('isp-val').innerText.includes("Scan")) document.getElementById('isp-val').innerText = t.ispDef;
+
+        document.getElementById('set-title').innerText = t.setTitle;
+        document.getElementById('lbl-duration').innerText = t.lblDur;
+        document.getElementById('lbl-theme').innerText = t.lblTheme;
+        document.getElementById('lbl-lang').innerText = t.lblLang;
+        document.getElementById('btn-close-set').innerText = t.btnCloseSet;
+
+        const durOpts = document.getElementById('sel-duration').options;
+        durOpts[0].text = t.dur15s; durOpts[1].text = t.dur1m; durOpts[2].text = t.dur5m; durOpts[3].text = t.dur15m; durOpts[4].text = t.dur30m;
+        
+        const themeOpts = document.getElementById('sel-theme').options;
+        themeOpts[0].text = t.themeDark; themeOpts[1].text = t.themeLight;
+    }
+
+    // --- HỆ THỐNG GIAO DIỆN (THEME) ---
+    const darkMapUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+    const lightMapUrl = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+    let currentTileLayer;
+
+    function applyTheme() {
+        let theme = document.getElementById('sel-theme').value;
+        if (theme === 'light') {
+            document.body.classList.add('light-theme');
+            map.removeLayer(currentTileLayer);
+            currentTileLayer = L.tileLayer(lightMapUrl).addTo(map);
+        } else {
+            document.body.classList.remove('light-theme');
+            map.removeLayer(currentTileLayer);
+            currentTileLayer = L.tileLayer(darkMapUrl).addTo(map);
+        }
+    }
+
+    // Toggle Modal
+    function toggleSettings() {
+        const modal = document.getElementById('set-modal');
+        modal.classList.toggle('show');
+    }
+
+    // Sóng âm click
     document.addEventListener('click', function(e) {
+        if(e.target.closest('.settings-modal')) return; // Bỏ qua nếu bấm trong cài đặt
         let ripple = document.createElement('div');
         ripple.className = 'click-ripple';
         ripple.style.left = e.clientX + 'px';
         ripple.style.top = e.clientY + 'px';
         document.body.appendChild(ripple);
-        
-        // Tự động xóa thẻ div sau khi chạy xong hiệu ứng (600ms) để không làm nặng máy
-        setTimeout(() => {
-            ripple.remove();
-        }, 600);
+        setTimeout(() => ripple.remove(), 600);
     });
 
-    let isTesting = false;
-    let phase = ''; 
-    let activeXhrs = [];
-    let totalBytes = 0;
-    let lastBytes = 0;
-    let lastTime = 0;
-    let speedHistory = [];
-    let uiFrame;
-    let map, userMarker;
-
-    // KẾT CẤU ICON RADAR MỚI CHO BẢN ĐỒ
-    let radarIcon = L.divIcon({
-        className: 'custom-radar-icon',
-        html: '<div class="radar-pulse"></div><div class="radar-core"></div>',
-        iconSize: [0, 0] // Đưa tâm điểm về chính xác giữa tọa độ
-    });
+    let isTesting = false, phase = '', activeXhrs = [], totalBytes = 0, lastBytes = 0, lastTime = 0, speedHistory = [], uiFrame, map, userMarker;
 
     window.onload = function() {
+        applyLanguage();
         map = L.map('map', { zoomControl: false, attributionControl: false }).setView([16.0, 108.0], 5);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
+        currentTileLayer = L.tileLayer(darkMapUrl).addTo(map);
 
-        fetch('https://get.geojs.io/v1/ip/geo.json')
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById('isp-val').innerText = data.organization_name || data.organization || "Không rõ";
-                
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                        (position) => {
-                            let lat = position.coords.latitude;
-                            let lon = position.coords.longitude;
-                            updateMap(lat, lon);
-                            
-                            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
-                                .then(res => res.json())
-                                .then(geoData => {
-                                    let city = geoData.address.city || geoData.address.town || geoData.address.state || "Unknown";
-                                    let country = geoData.address.country_code ? geoData.address.country_code.toUpperCase() : "";
-                                    document.getElementById('loc-val').innerText = `${city}, ${country}`;
-                                }).catch(() => fallbackIPLocation(data)); 
-                        },
-                        (error) => {
-                            fallbackIPLocation(data);
-                        },
-                        { enableHighAccuracy: true, timeout: 5000 }
-                    );
-                } else {
-                    fallbackIPLocation(data);
-                }
-            })
-            .catch(e => {
-                document.getElementById('loc-val').innerText = "Ẩn danh";
-                document.getElementById('isp-val').innerText = "Không xác định";
-            });
+        fetch('https://get.geojs.io/v1/ip/geo.json').then(res => res.json()).then(data => {
+            document.getElementById('isp-val').innerText = data.organization_name || data.organization || "N/A";
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        let lat = position.coords.latitude, lon = position.coords.longitude;
+                        updateMap(lat, lon);
+                        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+                            .then(res => res.json()).then(geoData => {
+                                let city = geoData.address.city || geoData.address.town || geoData.address.state || "Unknown";
+                                document.getElementById('loc-val').innerText = `${city}, ${geoData.address.country_code ? geoData.address.country_code.toUpperCase() : ''}`;
+                            }).catch(() => fallbackIPLocation(data)); 
+                    },
+                    (error) => fallbackIPLocation(data),
+                    { enableHighAccuracy: true, timeout: 5000 }
+                );
+            } else fallbackIPLocation(data);
+        }).catch(e => {
+            document.getElementById('loc-val').innerText = "Unknown"; document.getElementById('isp-val').innerText = "Unknown";
+        });
     };
 
     function updateMap(lat, lon) {
         map.setView([lat, lon], 14); 
         if (userMarker) map.removeLayer(userMarker);
-        // THAY THẾ DẤU CHẤM TRÒN BẰNG ICON RADAR
-        userMarker = L.marker([lat, lon], { icon: radarIcon }).addTo(map);
+        userMarker = L.circleMarker([lat, lon], { radius: 8, fillColor: "#38bdf8", color: "#fff", weight: 2, opacity: 1, fillOpacity: 0.9 }).addTo(map);
     }
-
     function fallbackIPLocation(data) {
-        let city = data.city || "Unknown";
-        let country = data.country || "";
+        let city = data.city || "Unknown", country = data.country || "";
         document.getElementById('loc-val').innerText = `${city}${country ? ', ' + country : ''}`;
-        if (data.latitude && data.longitude) {
-            updateMap(parseFloat(data.latitude), parseFloat(data.longitude));
-        }
+        if (data.latitude && data.longitude) updateMap(parseFloat(data.latitude), parseFloat(data.longitude));
     }
 
     function resetUI() {
-        document.getElementById('dl-mbps').innerText = "0"; 
-        document.getElementById('dl-mbs').innerText = "0.00";
-        document.getElementById('ping-val').innerText = "--"; 
-        document.getElementById('jitter-val').innerText = "--";
+        document.getElementById('dl-mbps').innerText = "0"; document.getElementById('dl-mbs').innerText = "0.00";
+        document.getElementById('ping-val').innerText = "--"; document.getElementById('jitter-val').innerText = "--";
         document.getElementById('zone-dl').classList.remove('active-zone');
         document.getElementById('status-txt').style.color = "var(--text-muted)";
     }
 
     function startUI() {
-        lastTime = Date.now();
-        lastBytes = totalBytes;
-        speedHistory = [];
-        
+        lastTime = Date.now(); lastBytes = totalBytes; speedHistory = [];
         const loop = () => {
             if (!isTesting || phase === 'ping') return;
-            let now = Date.now();
-            let deltaT = (now - lastTime) / 1000;
+            let now = Date.now(), deltaT = (now - lastTime) / 1000;
             if (deltaT >= 0.25) {
-                let deltaBytes = totalBytes - lastBytes;
-                let currentMBs = deltaBytes / (deltaT * 1024 * 1024);
-                let currentMbps = currentMBs * 8;
-                
+                let deltaBytes = totalBytes - lastBytes, currentMBs = deltaBytes / (deltaT * 1024 * 1024), currentMbps = currentMBs * 8;
                 speedHistory.push({ mbps: currentMbps, mbs: currentMBs });
                 if (speedHistory.length > 5) speedHistory.shift();
-                
                 let avgMbps = speedHistory.reduce((a, b) => a + b.mbps, 0) / speedHistory.length;
                 let avgMBs = speedHistory.reduce((a, b) => a + b.mbs, 0) / speedHistory.length;
-                
                 document.getElementById('dl-mbps').innerText = Math.max(0, avgMbps).toFixed(0);
                 document.getElementById('dl-mbs').innerText = Math.max(0, avgMBs).toFixed(2);
-                
-                lastBytes = totalBytes;
-                lastTime = now;
+                lastBytes = totalBytes; lastTime = now;
             }
             uiFrame = requestAnimationFrame(loop);
         };
@@ -285,63 +377,54 @@
 
     async function startFullSequence() {
         const musicPlayer = document.getElementById('myAudio');
+        const t = i18n[currentLang];
+        // Lấy thời gian đo từ cài đặt
+        const testDurationMS = parseInt(document.getElementById('sel-duration').value) * 1000; 
 
         if (isTesting) {
-            isTesting = false;
-            activeXhrs.forEach(xhr => xhr.abort());
-            activeXhrs = [];
+            isTesting = false; activeXhrs.forEach(xhr => xhr.abort()); activeXhrs = [];
             cancelAnimationFrame(uiFrame);
-            
-            musicPlayer.pause();
-            musicPlayer.currentTime = 0; 
-
-            document.getElementById('status-txt').innerText = "Đã dừng";
-            document.getElementById('btn').innerText = "Đo lại";
+            musicPlayer.pause(); musicPlayer.currentTime = 0; 
+            document.getElementById('status-txt').innerText = t.stopped;
+            document.getElementById('btn').innerText = t.retryBtn;
             return;
         }
 
         isTesting = true;
-        musicPlayer.play().catch(e => console.log("Cần tương tác người dùng để phát nhạc"));
-
+        musicPlayer.play().catch(e => console.log("Cần tương tác người dùng"));
         resetUI();
-        document.getElementById('btn').innerText = "Dừng lại";
+        document.getElementById('btn').innerText = t.stopBtn;
         
         phase = 'ping';
-        document.getElementById('status-txt').innerText = "Đang kiểm tra độ trễ...";
+        document.getElementById('status-txt').innerText = t.pinging;
         document.getElementById('status-txt').style.color = "var(--accent)";
         await measurePing(3000);
         if (!isTesting) return;
 
         phase = 'dl';
         totalBytes = 0; 
-        
-        document.getElementById('status-txt').innerText = "TỐC ĐỘ MẠNG HIỆN TẠI";
+        document.getElementById('status-txt').innerText = t.testing;
         
         document.getElementById('zone-dl').classList.add('active-zone');
         startUI();
-        await measureBandwidth(15000);
+        await measureBandwidth(testDurationMS); // Đo theo số phút cài đặt
         cancelAnimationFrame(uiFrame);
         document.getElementById('zone-dl').classList.remove('active-zone');
 
         isTesting = false;
-        document.getElementById('status-txt').innerText = "Hoàn tất";
-        document.getElementById('btn').innerText = "Đo lại";
+        document.getElementById('status-txt').innerText = t.done;
+        document.getElementById('btn').innerText = t.retryBtn;
     }
 
     async function measurePing(duration) {
-        let startTime = Date.now();
-        let pings = [];
+        let startTime = Date.now(), pings = [];
         while (Date.now() - startTime < duration && isTesting) {
             let pStart = Date.now();
             try {
                 await fetch('https://cloudflare.com/cdn-cgi/trace?r=' + Math.random(), { cache: 'no-store' });
-                let ping = Date.now() - pStart;
-                pings.push(ping);
+                let ping = Date.now() - pStart; pings.push(ping);
                 document.getElementById('ping-val').innerText = ping;
-                if (pings.length > 1) {
-                    let jitter = Math.abs(pings[pings.length - 1] - pings[pings.length - 2]);
-                    document.getElementById('jitter-val').innerText = jitter;
-                }
+                if (pings.length > 1) document.getElementById('jitter-val').innerText = Math.abs(pings[pings.length - 1] - pings[pings.length - 2]);
             } catch (e) {}
             await new Promise(r => setTimeout(r, 400));
         }
@@ -349,30 +432,16 @@
 
     function measureBandwidth(duration) {
         return new Promise((resolve) => {
-            let startTime = Date.now();
-            let activeThreads = 0;
-            let maxThreads = 4;
-
+            let startTime = Date.now(), activeThreads = 0, maxThreads = 4;
             function nextChunk() {
-                if (!isTesting || Date.now() - startTime >= duration) {
-                    if (activeThreads === 0) resolve();
-                    return;
-                }
-                activeThreads++;
-                let xhr = new XMLHttpRequest();
-                activeXhrs.push(xhr);
+                if (!isTesting || Date.now() - startTime >= duration) { if (activeThreads === 0) resolve(); return; }
+                activeThreads++; let xhr = new XMLHttpRequest(); activeXhrs.push(xhr);
                 xhr.open('GET', "https://speed.cloudflare.com/__down?bytes=25000000&r=" + Math.random(), true);
                 let chunkLoaded = 0;
-                xhr.onprogress = (e) => {
-                    if (!isTesting) return;
-                    totalBytes += (e.loaded - chunkLoaded);
-                    chunkLoaded = e.loaded;
-                };
+                xhr.onprogress = (e) => { if (!isTesting) return; totalBytes += (e.loaded - chunkLoaded); chunkLoaded = e.loaded; };
                 xhr.send();
                 xhr.onload = xhr.onerror = xhr.onabort = () => { 
-                    activeThreads--;
-                    let idx = activeXhrs.indexOf(xhr);
-                    if(idx > -1) activeXhrs.splice(idx, 1);
+                    activeThreads--; let idx = activeXhrs.indexOf(xhr); if(idx > -1) activeXhrs.splice(idx, 1);
                     nextChunk(); 
                 };
             }
